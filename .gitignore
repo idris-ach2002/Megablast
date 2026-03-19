@@ -1,0 +1,71 @@
+# Stack / Cabal / GHC build artefacts
+dist/
+dist-newstyle/
+.stack-work/
+*.hi
+*.o
+
+# GHCi / REPL
+.ghci
+.ghc.environment.*
+
+# Haskell Language Server / IDE
+.hie
+hie.yaml
+
+# Profiling / coverage / runtime reports
+*.prof
+*.aux
+*.hp
+*.eventlog
+*.tix
+*.mix
+hpc/
+.hspec-failures
+stan.html
+
+# Cabal local config
+cabal.project.local
+cabal.project.local~
+cabal.project.freeze
+
+# VS Code
+.vscode/
+.VSCodeCounter
+
+# IntelliJ
+.idea/
+*.iml
+
+# Vim / Emacs
+*.swp
+*.tag
+.dir-locals.el
+*_flymake.hs
+
+# Temporary files
+*~
+*.log
+*.imports
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional tools
+.hsenv
+.vagrant/
+.envrc
+.direnv/
+result
+
+# Project-specific temporary/generated files
+better-cache/
+tests/integration/tests/**/*.yaml.lock
+etc/scripts/stack.yaml.lock
+_release/
+_site/
+.python-doc-virtualenv
+src/highlight.js
+src/style.css
+etc/scripts/stack-scripts.cabal
