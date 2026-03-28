@@ -15,6 +15,9 @@ module Lib
   , mkPoint, mkDisque, mkRectangle, mkComposee
   , collision
   , prop_composee2points_point
+  -- Partie 2: murs
+  ,mur_dent_scie_Exam
+  ,mur_gauche_vertical_10
 
   -- Partie 3 : Obstacles / Projectiles / Tour
   , Direction(..), dirVector
@@ -52,6 +55,8 @@ data Hitbox
   = Point Int Int
   | Disque Int Int Int
   | Rectangle Int Int Int Int
+  | MurGauche [(Int, Int)]
+  | MurDroit [(Int, Int)]
   | Composee [Hitbox]
   deriving (Eq, Show)
 
@@ -61,6 +66,9 @@ prop_inv_hitbox (Point _ _)         = True
 prop_inv_hitbox (Disque _ _ r)      = r > 0
 prop_inv_hitbox (Rectangle _ _ w h) = w > 0 && h > 0
 prop_inv_hitbox (Composee hs)       = length hs >= 2 && all prop_inv_hitbox hs
+--TODO: Revoir les invariants sur les murs, 
+prop_inv_hitbox (MurGauche ls) = length ls >= 2
+prop_inv_hitbox (MurDroit ls) = length ls >= 2
 
 -- Smart constructors
 mkPoint :: Int -> Int -> Hitbox
@@ -82,7 +90,17 @@ mkComposee hs
   | all prop_inv_hitbox hs = Right (Composee hs)
   | otherwise              = Left "Une composante viole prop_inv_hitbox"
 
--- Collisions : cas demandés dans l'ER1 (et on rend le reste False, pas undefined)
+-- Collisions : cas demandés dans l'ER1
+--TODO: compélter tous les cas de collisions
+
+-- appropriate_segment (Point x y) [(Int, Int)] : Trouve les deux points (le segment) entre lesquels les coordonnées de notre Point x y sont.
+point_appropriate_segment :: Hitbox -> [(Int, Int)] -> ((Int,Int), (Int, Int))
+point_appropriate_segment p@(Point _ y) (p1@(_, y1) : p2@(_, y2) : ls') = 
+  if y >= y1 && y <= y2 then (p1, p2)
+  else point_appropriate_segment  p (p2 : ls')
+-- TODO: jsp si vaut mieux rendre faux pour les cas qui ne sont pas censé arrivé, en tt cas on met undefined pour voir au moins quand ça crash
+point_appropriate_segment _ _ = undefined -- Ce cas n'est jamais censé arrivé 
+
 collision :: Hitbox -> Hitbox -> Bool
 collision (Point x1 y1) (Point x2 y2) =
   x1 == x2 && y1 == y2
@@ -99,7 +117,47 @@ collision d@(Disque _ _ _) p@(Point _ _) = collision p d
 collision (Composee hs) h = any (`collision` h) hs
 collision h (Composee hs) = any (collision h) hs
 
-collision _ _ = False
+collision p@(Point x y) (MurGauche ls) = collision' $ point_appropriate_segment p ls
+  where 
+    collision' ((x1, y1), (x2, y2)) = 
+
+      let
+        -- Calcule de l'équation de la droite du segment
+        -- y = ax + b 
+        aSeg :: Float
+        aSeg = fromIntegral (y2 - y1) / fromIntegral (x2 - x1)        
+        -- On replace avec un des deux points du segment pour avoir b d'après: b = y - ax
+        bSeg :: Float
+        bSeg = fromIntegral y1 - aSeg * fromIntegral x1
+        -- Calcule du point (x', y') qui qui représente la projection horizontale du point (x,y) sur le segment.
+        -- On a y' = y, Pour x' : On remplace dans la droite du segment: x' = (y'-b) / a
+        x' :: Float
+        x' = (fromIntegral y - bSeg) / aSeg
+      in
+      -- On est en collision si on se trouve à gauche de la projection horizontale
+      fromIntegral x <= x'
+--TODO: factorise avec celui de gauche
+collision p@(Point x y) (MurDroit ls) = collision' $ point_appropriate_segment p ls
+  where 
+    collision' ((x1, y1), (x2, y2)) = 
+
+      let
+        -- Calcule de l'équation de la droite du segment
+        -- y = ax + b 
+        aSeg :: Float
+        aSeg = fromIntegral (y2 - y1) / fromIntegral (x2 - x1)        
+        -- On replace avec un des deux points du segment pour avoir b d'après: b = y - ax
+        bSeg :: Float
+        bSeg = fromIntegral y1 - aSeg * fromIntegral x1
+        -- Calcule du point (x', y') qui qui représente la projection horizontale du point (x,y) sur le segment.
+        -- On a y' = y, Pour x' : On remplace dans la droite du segment: x' = (y'-b) / a
+        x' :: Float
+        x' = (fromIntegral y - bSeg) / aSeg
+      in
+      -- On est en collision si on se trouve à droite de la projection horizontale
+      fromIntegral x >= x'
+
+collision _ _ = undefined
 
 -- Q1.4 : si h1 = Composee [p1,p2] et h2 est un Point en collision avec h1,
 -- alors h2 est p1 ou p2.
@@ -112,6 +170,35 @@ prop_composee2points_point (x1,y1) (x2,y2) (x,y) =
   in collision h1 h2 ==> (h2 == p1 || h2 == p2)
   where
     (==>) a b = (not a) || b
+
+
+--------------------------------------------------------------------------------
+-- Partie 2 : Murs
+--------------------------------------------------------------------------------
+
+mur_gauche_dents_scie :: Int -> Int -> Hitbox
+mur_gauche_dents_scie dx dy = MurGauche $ (0,0) : aux 0 0 where
+    aux prevX prevY = 
+      let 
+        (newX, newY) = 
+          if prevX == 0 then (dx, prevY + dy)
+          else (0, prevY + dy)
+      in
+      (newX, newY) : aux newX newY
+
+mur_gauche_vertical :: Int -> Int -> Hitbox
+mur_gauche_vertical x dy = MurGauche (aux 0)
+  where
+    aux y = (x, y) : aux (y + dy)
+
+-- Question 2.1:
+mur_dent_scie_Exam :: Hitbox
+mur_dent_scie_Exam = mur_gauche_dents_scie 5 10
+
+-- Question 2.2:
+mur_gauche_vertical_10 :: Hitbox
+mur_gauche_vertical_10 = mur_gauche_vertical 10 10
+
 
 --------------------------------------------------------------------------------
 -- Partie 3 : Obstacles / Projectiles / Tour
