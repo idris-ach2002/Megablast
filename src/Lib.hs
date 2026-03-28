@@ -67,8 +67,8 @@ prop_inv_hitbox (Disque _ _ r)      = r > 0
 prop_inv_hitbox (Rectangle _ _ w h) = w > 0 && h > 0
 prop_inv_hitbox (Composee hs)       = length hs >= 2 && all prop_inv_hitbox hs
 --TODO: Revoir les invariants sur les murs, 
-prop_inv_hitbox (MurGauche ls) = length ls >= 2
-prop_inv_hitbox (MurDroit ls) = length ls >= 2
+prop_inv_hitbox (MurGauche l) = length l >= 2
+prop_inv_hitbox (MurDroit l) = length l >= 2
 
 -- Smart constructors
 mkPoint :: Int -> Int -> Hitbox
@@ -93,11 +93,11 @@ mkComposee hs
 -- Collisions : cas demandés dans l'ER1
 --TODO: compélter tous les cas de collisions
 
--- appropriate_segment (Point x y) [(Int, Int)] : Trouve les deux points (le segment) entre lesquels les coordonnées de notre Point x y sont.
+-- appropriate_segment (Point x y) [(Int, Int)] : Trouve les deux points (le segment) entre lesquels notre Point x y se trouve.
 point_appropriate_segment :: Hitbox -> [(Int, Int)] -> ((Int,Int), (Int, Int))
-point_appropriate_segment p@(Point _ y) (p1@(_, y1) : p2@(_, y2) : ls') = 
+point_appropriate_segment p@(Point _ y) (p1@(_, y1) : p2@(_, y2) : l') = 
   if y >= y1 && y <= y2 then (p1, p2)
-  else point_appropriate_segment  p (p2 : ls')
+  else point_appropriate_segment  p (p2 : l')
 -- TODO: jsp si vaut mieux rendre faux pour les cas qui ne sont pas censé arrivé, en tt cas on met undefined pour voir au moins quand ça crash
 point_appropriate_segment _ _ = undefined -- Ce cas n'est jamais censé arrivé 
 
@@ -117,7 +117,7 @@ collision d@(Disque _ _ _) p@(Point _ _) = collision p d
 collision (Composee hs) h = any (`collision` h) hs
 collision h (Composee hs) = any (collision h) hs
 
-collision p@(Point x y) (MurGauche ls) = collision' $ point_appropriate_segment p ls
+collision p@(Point x y) (MurGauche l) = collision' $ point_appropriate_segment p l
   where 
     collision' ((x1, y1), (x2, y2)) = 
 
@@ -137,7 +137,7 @@ collision p@(Point x y) (MurGauche ls) = collision' $ point_appropriate_segment 
       -- On est en collision si on se trouve à gauche de la projection horizontale
       fromIntegral x <= x'
 --TODO: factorise avec celui de gauche
-collision p@(Point x y) (MurDroit ls) = collision' $ point_appropriate_segment p ls
+collision p@(Point x y) (MurDroit l) = collision' $ point_appropriate_segment p l
   where 
     collision' ((x1, y1), (x2, y2)) = 
 
@@ -203,7 +203,9 @@ mur_gauche_vertical_10 = mur_gauche_vertical 10 10
 --------------------------------------------------------------------------------
 -- Partie 3 : Obstacles / Projectiles / Tour
 --------------------------------------------------------------------------------
-
+--FIXME: d'après ce que j'ai compris, il faut définir un type somme object dans lequel tu met obstacle, prjectile et Joueuse ?
+ 
+--FIXME: Pas mieux d'utiliser l'ordre Doite, Haut, Gauche, Bas (celui du sens positive trigo) ? sinon c pas important
 data Direction = Haut | Bas | Gauche | Droite
   deriving (Eq, Show, Enum, Bounded)
 
@@ -251,6 +253,8 @@ translateHitbox :: Int -> Int -> Hitbox -> Hitbox
 translateHitbox dx dy (Point x y)            = Point (x + dx) (y + dy)
 translateHitbox dx dy (Disque xc yc r)       = Disque (xc + dx) (yc + dy) r
 translateHitbox dx dy (Rectangle x y w h)    = Rectangle (x + dx) (y + dy) w h
+translateHitbox dx dy (MurGauche l)          = MurGauche (map (\(x, y) -> (x+dx, y+dy)) l)
+translateHitbox dx dy (MurDroit l)           = MurDroit (map (\(x, y) -> (x+dx, y+dy)) l)
 translateHitbox dx dy (Composee hs)          = Composee (map (translateHitbox dx dy) hs)
 
 newtype Obstacle = Obstacle { obsHitbox :: Hitbox }
@@ -267,6 +271,7 @@ mkObstacle h
 defileObstacle :: Obstacle -> Obstacle
 defileObstacle (Obstacle h) = Obstacle (translateHitbox 0 (-1) h)
 
+--NOTE: ça sert à quoi de distinguer le projectile appartien à qui ?
 data ProjectileOwner = TirJoueuse | TirEnnemi
   deriving (Eq, Show, Enum, Bounded)
 
@@ -336,12 +341,99 @@ prop_post_finDeTourObstacles _ _ (cad', obs') =
   prop_inv_cadence cad' && all prop_inv_obstacle obs'
 
 --------------------------------------------------------------------------------
--- Partie 5 : Ennemis
+-- Partie 4 : Joueuses
 --------------------------------------------------------------------------------
-
 data Action = Deplacer Direction | Tirer | Attendre
   deriving (Eq, Show)
 
+data VaisseauJoueuse = VaisseauJoueuse{ 
+  vjHitbox  :: Hitbox
+  , vjPv      :: Int
+  , vjEssais  :: Int
+  , vjCadence :: Cadence -- vitesse 
+  } deriving (Eq, Show)
+
+prop_inv_vaisseau :: VaisseauJoueuse -> Bool
+prop_inv_vaisseau v =
+  prop_inv_hitbox (vjHitbox v)
+  && vjPv v >= 0
+  && vjEssais v >= 0
+  && prop_inv_cadence (vjCadence v)
+
+mkVaisseauJoueuse :: Hitbox -> Int -> Int -> Cadence -> Either Text VaisseauJoueuse
+mkVaisseauJoueuse h pv essais cad
+  | not (prop_inv_hitbox h)  = Left "Vaisseau: Hitbox invalide"
+  | pv < 0                   = Left "Vaisseau: Points de vie negatifs"
+  | essais < 0               = Left "Vaisseau: Nombre d'essais negatif"
+  | not (prop_inv_cadence cad) = Left "Vaisseau: Cadence invalide"
+  | otherwise                = Right (VaisseauJoueuse h pv essais cad)
+
+deplaceVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse
+deplaceVaisseau d v =
+  let (dx, dy) = dirVector d
+  in v { vjHitbox = translateHitbox dx dy (vjHitbox v) }
+
+prop_pre_deplaceVaisseau :: Direction -> VaisseauJoueuse -> Bool
+prop_pre_deplaceVaisseau _ v = prop_inv_vaisseau v
+
+-- TODO: Normalement on doit vérifier la translation
+prop_post_deplaceVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse -> Bool
+prop_post_deplaceVaisseau _ v v' =
+     prop_inv_vaisseau v'
+  && vjPv v' == vjPv v
+  && vjEssais v' == vjEssais v
+  && vjCadence v' == vjCadence v
+
+-- Si on est repossé on se déplace vers la direction opposée
+repousseVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse
+repousseVaisseau d v =
+  let (dx, dy) = dirVector d
+  in v { vjHitbox = translateHitbox (-dx) (-dy) (vjHitbox v) }
+
+prop_pre_repousseVaisseau :: Direction -> VaisseauJoueuse -> Bool
+prop_pre_repousseVaisseau _ v = prop_inv_vaisseau v
+
+-- Si on repousse le vaisseau, un déplacement dans cette même direction devrait nous ramener à la position exacte (v)
+prop_post_repousseVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse -> Bool
+prop_post_repousseVaisseau d v v' =
+     prop_inv_vaisseau v'
+  && deplaceVaisseau d v' == v
+
+tirVaisseau :: VaisseauJoueuse -> Cadence -> Projectile
+tirVaisseau v cadProj =
+  Projectile
+    { prHitbox  = vjHitbox v -- Le projectile part de la position du vaisseau
+    , prDir     = Haut       
+    , prCadence = cadProj
+    , prOwner   = TirJoueuse
+    }
+
+prop_pre_tirVaisseau :: VaisseauJoueuse -> Cadence -> Bool
+prop_pre_tirVaisseau v cadProj = 
+  prop_inv_vaisseau v && prop_inv_cadence cadProj
+
+prop_post_tirVaisseau :: VaisseauJoueuse -> Cadence -> Projectile -> Bool
+prop_post_tirVaisseau _ _ p =
+     prop_inv_projectile p
+  && prDir p == Haut
+  && prOwner p == TirJoueuse
+
+subirDegat :: VaisseauJoueuse -> VaisseauJoueuse
+subirDegat v = v { vjPv = max 0 (vjPv v - 1) }
+
+prop_pre_subirDegat :: VaisseauJoueuse -> Bool
+prop_pre_subirDegat = prop_inv_vaisseau
+
+prop_post_subirDegat :: VaisseauJoueuse -> VaisseauJoueuse -> Bool
+prop_post_subirDegat v v' =
+     prop_inv_vaisseau v'
+  && vjPv v' == max 0 (vjPv v - 1)
+  && vjEssais v' == vjEssais v
+
+
+--------------------------------------------------------------------------------
+-- Partie 5 : Ennemis
+--------------------------------------------------------------------------------
 data Oracle
   = Scripted [Action] Int     -- liste cyclique + index
   | FromInt                   -- action déterminée par l'int du moteur
