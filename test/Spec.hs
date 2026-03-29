@@ -10,6 +10,9 @@ import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
 
+import Objects
+import Hitbox
+
 main :: IO ()
 main = hspec $ do
   describe "Hitbox: invariants et constructeurs" $ do

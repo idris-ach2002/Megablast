@@ -2,7 +2,8 @@
 
 module SpecHelpers where
 
-import Lib
+import Objects
+import Hitbox
 import Test.QuickCheck
 
 -- Ça sert à contraindre les valeurs générées (ici: petites valeurs, pour éviter des trucs énormes).

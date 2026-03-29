@@ -1,6 +1,7 @@
 module Main (main) where
 
-import Lib
+import Murs
+import Hitbox
 
 afficheMur :: Int -> Hitbox -> IO ()
 afficheMur n (MurGauche pts) = print (take n pts)

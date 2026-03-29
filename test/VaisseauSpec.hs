@@ -1,10 +1,11 @@
 module VaisseauSpec (spec) where
 
-import Lib
 import SpecHelpers
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
+import Objects
+import Hitbox
 
 spec :: Spec
 spec = do
