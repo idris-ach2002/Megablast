@@ -29,6 +29,19 @@ module Lib
   , avanceProjectile, prop_pre_avanceProjectile, prop_post_avanceProjectile
   , finDeTourProjectile, prop_pre_finDeTourProjectile, prop_post_finDeTourProjectile
   , finDeTourObstacles, prop_pre_finDeTourObstacles, prop_post_finDeTourObstacles
+  
+  -- Partie 4
+  , VaisseauJoueuse(..)
+  , prop_inv_vaisseau
+  , mkVaisseauJoueuse
+  , deplaceVaisseau
+  , prop_post_deplaceVaisseau
+  , repousseVaisseau
+  , prop_post_repousseVaisseau
+  , tirVaisseau
+  , prop_post_tirVaisseau
+  , subirDegat
+  , prop_post_subirDegat
 
   -- Partie 5 : Ennemis
   , Action(..)

@@ -63,6 +63,8 @@ test-suite MegablastXenon2-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      SpecHelpers
+      VaisseauSpec
       Paths_MegablastXenon2
   autogen-modules:
       Paths_MegablastXenon2
