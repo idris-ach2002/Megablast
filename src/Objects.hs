@@ -14,8 +14,7 @@ import Hitbox
 
 --FIXME: d'après ce que j'ai compris, il faut définir un type somme object dans lequel tu met obstacle, prjectile et Joueuse ?
  
---FIXME: Pas mieux d'utiliser l'ordre Doite, Haut, Gauche, Bas (celui du sens positive trigo) ? sinon c pas important
-data Direction = Haut | Bas | Gauche | Droite
+data Direction = Droite | Haut | Gauche | Bas
   deriving (Eq, Show, Enum, Bounded)
 
 dirVector :: Direction -> (Int, Int)
@@ -83,7 +82,7 @@ defileObstacle (Obstacle h) = Obstacle (translateHitbox 0 (-1) h)
 --NOTE: ça sert à quoi de distinguer le projectile appartien à qui ?
 data ProjectileOwner = TirJoueuse | TirEnnemi
   deriving (Eq, Show, Enum, Bounded)
-
+--NOTE: a voir pour la suite si on a vraiment besoin de ProjectileOwner
 data Projectile = Projectile
   { prHitbox  :: Hitbox
   , prDir     :: Direction

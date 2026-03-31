@@ -6,7 +6,6 @@ module Hitbox where
 import Data.Text (Text)
 import Lib
 
-
 data Hitbox
   = Point Int Int
   | Disque Int Int Int

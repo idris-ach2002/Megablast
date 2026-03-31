@@ -4,6 +4,7 @@ module Murs where
 
 import Hitbox
 
+--TODO: Mur droit symetrique (utilise fmap)
 mur_gauche_dents_scie :: Int -> Int -> Hitbox
 mur_gauche_dents_scie dx dy = MurGauche $ (0,0) : aux 0 0 where
     aux prevX prevY = 
