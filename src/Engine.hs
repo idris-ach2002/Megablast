@@ -276,7 +276,7 @@ finDeTourMoteur m
                   , mRng  = rngNext }
 
       in m3
-      
+
 -- | Heuristique : une hitbox est considérée hors-écran si elle dépasse les
 --   bornes [-100, 2000] sur chaque axe.  On ne connaît pas la taille exacte
 --   de l'écran dans le moteur ; les parties supérieures/inférieures à ces
@@ -315,3 +315,72 @@ replaceAt _ _ []     = []
 replaceAt 0 x (_:xs) = x : xs
 replaceAt n x (y:ys) = y : replaceAt (n-1) x ys
 
+-- ---------------------------------------------------------------------------
+-- Exemple / jeu de tests
+-- ---------------------------------------------------------------------------
+
+-- Moteur de départ minimaliste pour les tests.
+exempleMoteur :: Either Text Moteur
+exempleMoteur = do
+  cad      <- mkCadence 3           -- défilement toutes les 3 tours
+  hVaisseau <- mkRectangle 50 20 10 10
+  cadV     <- mkCadence 1
+  vaisseau <- mkVaisseauJoueuse hVaisseau 5 2 cadV
+  hObs     <- mkRectangle 30 300 40 20
+  obs      <- mkObstacle hObs
+  let oracle = Scripted [Attendre, Deplacer Gauche, Tirer] 0
+  pv       <- mkPV 3
+  cadEnn   <- mkCadence 2
+  hEnn     <- mkRectangle 60 500 12 12
+  enn      <- mkEnnemi hEnn pv oracle cadEnn
+  mkMoteur
+    [obs]
+    []
+    [enn]
+    [vaisseau]
+    cad
+    [ EvenementPlanifie 5 (AppObstacle obs)  -- un obstacle apparaît au tour 5
+    , EvenementPlanifie 10 (DisparEnnemi 0)   -- l'ennemi 0 disparaît au tour 10
+    ]
+    0
+    42
+
+-- | Propriété : finDeTourMoteur incrémente le tour de 1.
+prop_tour_incremente :: Moteur -> Bool
+prop_tour_incremente m
+  | not (prop_inv_moteur m) = True   -- hypothèse non vérifiée : on ne teste pas
+  | not (prop_partie_en_cours m) = True
+  | otherwise = mTour (finDeTourMoteur m) == mTour m + 1
+
+-- | Propriété : finDeTourMoteur préserve l'invariant du moteur.
+prop_invariant_preserve :: Moteur -> Bool
+prop_invariant_preserve m
+  | not (prop_inv_moteur m) = True
+  | not (prop_partie_en_cours m) = True
+  | otherwise = prop_inv_moteur (finDeTourMoteur m)
+
+-- | Propriété : le nombre de joueuses ne change pas après un tour.
+prop_joueuses_stables :: Moteur -> Bool
+prop_joueuses_stables m
+  | not (prop_inv_moteur m) = True
+  | not (prop_partie_en_cours m) = True
+  | otherwise =
+      length (mJoueuses (finDeTourMoteur m)) == length (mJoueuses m)
+
+-- | Propriété : le script perd les événements passés après finDeTourMoteur.
+prop_script_diminue :: Moteur -> Bool
+prop_script_diminue m
+  | not (prop_inv_moteur m) = True
+  | not (prop_partie_en_cours m) = True
+  | otherwise =
+      let m' = finDeTourMoteur m
+          t' = mTour m'
+      in all (\ep -> epTour ep > t') (mScript m')  -- plus d'événements en retard
+
+-- | Preuve informelle de prop_tour_incremente :
+--
+--   Soit m un moteur vérifiant prop_inv_moteur et prop_partie_en_cours.
+--   Par définition de finDeTourMoteur, la dernière étape (étape 7) pose :
+--     mTour m3 = tourActuel + 1
+--   où tourActuel = mTour m.
+--   Donc mTour (finDeTourMoteur m) = mTour m + 1.  
