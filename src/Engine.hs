@@ -88,7 +88,7 @@ mkMoteur
   -> Int                   -- tour initial (>= 0)
   -> Int                   -- graine RNG
   -> Either Text Moteur
-mkMoteur obs projs enns jous cad evts tour rng
+mkMoteur obs projs enns jous cad evts tour seed
   | not (all prop_inv_obstacle obs)   = Left "mkMoteur: obstacle invalide"
   | not (all prop_inv_projectile projs) = Left "mkMoteur: projectile invalide"
   | not (all prop_inv_ennemi enns)    = Left "mkMoteur: ennemi invalide"
@@ -254,30 +254,29 @@ finDeTourMoteur m
 
           -- 4. Tour des ennemis : actions + nouveaux projectiles
           rng = mRng m1
-          let (graineEnnemis, rngNext) = random rng :: (Int, StdGen)
+          (graineEnnemis, rngNext) = random rng :: (Int, StdGen)
 
-          (enns', newProjs) = unzip $ map (finDeTourEnnemi rng) (mEnnemis m1)
+          (enns', newProjs) = unzip $ map (finDeTourEnnemi graineEnnemis) (mEnnemis m1)
           projsEnnemis      = [ p | Just p <- newProjs ]
-
 
           -- 5. Assemblage et filtrage des projectiles hors écran
           tousProjs = projs' ++ projsEnnemis
           projsValides = filter (not . horsEcranGrossier . prHitbox) tousProjs
 
           -- 6. Collisions
-          m2 = resoudreCollisions m1
-                { mObstacles   = obs'
-                , mProjectiles = projsValides
-                , mEnnemis     = enns'
-                , mCadScroll   = cadScroll'
-                }
+          m2 = resoudreCollisions
+                 (m1 { mObstacles   = obs'
+                     , mProjectiles = projsValides
+                     , mEnnemis     = enns'
+                     , mCadScroll   = cadScroll'
+                     })
 
           -- 7. Incréments
           m3 = m2 { mTour = tourActuel + 1
                   , mRng  = rngNext }
 
       in m3
-
+      
 -- | Heuristique : une hitbox est considérée hors-écran si elle dépasse les
 --   bornes [-100, 2000] sur chaque axe.  On ne connaît pas la taille exacte
 --   de l'écran dans le moteur ; les parties supérieures/inférieures à ces

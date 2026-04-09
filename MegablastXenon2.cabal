@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Engine
       Hitbox
       Lib
       Murs
@@ -41,6 +42,7 @@ library
     , base >=4.7 && <5
     , containers
     , hspec
+    , random
     , text
   default-language: Haskell2010
 
@@ -59,6 +61,7 @@ executable MegablastXenon2-exe
     , base >=4.7 && <5
     , containers
     , hspec
+    , random
     , text
   default-language: Haskell2010
 
@@ -80,5 +83,6 @@ test-suite MegablastXenon2-test
     , base >=4.7 && <5
     , containers
     , hspec
+    , random
     , text
   default-language: Haskell2010
