@@ -1,18 +1,43 @@
-module Main (main) where
+module Main where
 
-import Murs
-import Hitbox
+import Graphics.Gloss
+import Graphics.Gloss.Interface.Pure.Game
+import Engine
+import Objects
+import View
+import Controller
 
-afficheMur :: Int -> Hitbox -> IO ()
-afficheMur n (MurGauche pts) = print (take n pts)
-afficheMur _ _ = putStrLn "Ce n'est pas un mur gauche."
+---------------------------------------------------------------------------------
+-- Fenêtre Gloss
+---------------------------------------------------------------------------------
+
+fenetre :: Display
+fenetre = InWindow "Xenon 2 : Megablast" (largeurFenetre, hauteurFenetre) (100, 100)
+
+-- | Framerate cible (frames par seconde).
+fps :: Int
+fps = 60
+
+---------------------------------------------------------------------------------
+-- Point d'entrée
+---------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
-    let mur = mur_dent_scie_Exam
-        p1  = Point 1 8
-        p2  = Point 5 19
-
-    putStrLn "Test collision (Point x y) (MurGauche ls) :"
-    putStrLn $ "collision " ++ show p1 ++ " mur = " ++ show (collision p1 mur)
-    putStrLn $ "collision " ++ show p2 ++ " mur = " ++ show (collision p2 mur)
+  -- Construction du moteur initial (on unwrap le Either ici, en IO)
+  let moteurE = exempleMoteur
+  case moteurE of
+    Left err -> putStrLn $ "Erreur initialisation moteur: " ++ show err
+    Right m  ->
+      case mkCadence 3 of
+        Left err  -> putStrLn $ "Erreur cadence tir: " ++ show err
+        Right cadTir -> do
+          let appState = mkAppStateFull (mkAppState m cadTir)
+          play
+            fenetre
+            couleurFond           -- couleur de fond (écrasée par dessinerMoteur)
+            fps
+            appState
+            (dessinerMoteur . asMoteur . asfBase)   -- View
+            gererEvenementFull                       -- Controller (events)
+            simulerStep                              -- Controller (step)

@@ -326,6 +326,7 @@ exempleMoteur = do
   hVaisseau <- mkRectangle 50 20 10 10
   cadV     <- mkCadence 1
   vaisseau <- mkVaisseauJoueuse hVaisseau 5 2 cadV
+  vaisseau2 <- mkVaisseauJoueuse hVaisseau 5 2 cadV
   hObs     <- mkRectangle 30 300 40 20
   obs      <- mkObstacle hObs
   let oracle = Scripted [Attendre, Deplacer Gauche, Tirer] 0
@@ -337,7 +338,7 @@ exempleMoteur = do
     [obs]
     []
     [enn]
-    [vaisseau]
+    [vaisseau, vaisseau2]
     cad
     [ EvenementPlanifie 5 (AppObstacle obs)  -- un obstacle apparaît au tour 5
     , EvenementPlanifie 10 (DisparEnnemi 0)   -- l'ennemi 0 disparaît au tour 10
