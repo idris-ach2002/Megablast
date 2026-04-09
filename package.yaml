@@ -26,6 +26,7 @@ dependencies:
 - QuickCheck
 - hspec
 - random
+- gloss
 
 ghc-options:
 - -Wall
