@@ -5,6 +5,7 @@ module Main where
 import Lib
 import SpecHelpers 
 import qualified VaisseauSpec
+import qualified HitboxSpec
 
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -33,19 +34,8 @@ main = hspec $ do
         isRightWith prop_inv_hitbox (mkDisque x y r)
         && isRightWith prop_inv_hitbox (mkRectangle x y w h)
 
-  describe "Hitbox: collision et propriété Composee" $ do
-    it "Exemple simple: composee de 2 points" $ do
-      let p1 = Point 0 0
-          p2 = Point 10 10
-          h1 = Composee [p1,p2]
-      collision h1 (Point 0 0) `shouldBe` True
-      collision h1 (Point 10 10) `shouldBe` True
-      collision h1 (Point 0 10) `shouldBe` False
-
-    prop "Q1.4: si collision avec Composee[2 points], alors c'est un des 2 points" $
-      \(SmallInt x1) (SmallInt y1) (SmallInt x2) (SmallInt y2) (SmallInt x) (SmallInt y) ->
-        prop_composee2points_point (x1,y1) (x2,y2) (x,y)
-    -- au lieu d’utiliser arbitrary, utilise ce générateur
+  describe "Tests des collisions" $ do
+    HitboxSpec.spec
   describe "Cadence" $ do
     prop "tickCadence préserve l'invariant" $
       forAll genCadence $ \c ->
