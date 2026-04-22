@@ -45,6 +45,29 @@ mkComposee hs
   | all prop_inv_hitbox hs = Right (Composee hs)
   | otherwise              = Left "Une composante viole prop_inv_hitbox"
 
+pointInRectangle :: Int -> Int -> Int -> Int -> Int -> Int -> Bool
+pointInRectangle x y rx ry w h =
+  rx <= x && x < rx + w && ry <= y && y < ry + h
+
+clampInt :: Int -> Int -> Int -> Int
+clampInt lo hi v = max lo (min hi v)
+
+distanceSquared :: Int -> Int -> Int -> Int -> Int
+distanceSquared x1 y1 x2 y2 =
+  let dx = x1 - x2
+      dy = y1 - y2
+  in dx * dx + dy * dy
+
+collisionRectangleDisque :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Bool
+collisionRectangleDisque rx ry w h xc yc r =
+  let closestX = clampInt rx (rx + w - 1) xc
+      closestY = clampInt ry (ry + h - 1) yc
+  in distanceSquared xc yc closestX closestY <= r * r
+
+segmentOverlapsY :: Int -> Int -> ((Int, Int), (Int, Int)) -> Bool
+segmentOverlapsY yMin yMax ((_, y1), (_, y2)) =
+  max yMin y1 <= min yMax y2
+
 -- Trouve le segment du mur qui encadre l'ordonnée donnée.
 -- Renvoie Nothing si l'ordonnée n'est couverte par aucun segment.
 segmentAtY :: Int -> [(Int, Int)] -> Maybe ((Int, Int), (Int, Int))
@@ -70,10 +93,40 @@ collisionPointMur cmp x y pts =
     Nothing  -> False
     Just seg -> cmp (fromIntegral x) (xOnSegmentAtY y seg)
 
+collisionRectangleMur
+  :: (Float -> Float -> Bool)
+  -> (Float -> Float -> Float)
+  -> Int
+  -> Int
+  -> Int
+  -> [(Int, Int)]
+  -> Bool
+collisionRectangleMur cmp chooseX edgeX ry h pts =
+  let yMin = ry
+      yMax = ry + h - 1
+      aux [] = False
+      aux [_] = False
+      aux (p1 : p2 : rest) =
+        let seg = (p1, p2)
+        in if segmentOverlapsY yMin yMax seg
+             then
+               let yStart = max yMin (snd p1)
+                   yEnd   = min yMax (snd p2)
+                   xStart = xOnSegmentAtY yStart seg
+                   xEnd   = xOnSegmentAtY yEnd seg
+                   wallX  = chooseX xStart xEnd
+               in cmp (fromIntegral edgeX) wallX || aux (p2 : rest)
+             else aux (p2 : rest)
+  in aux pts
+
 --TODO: compléter progressivement les autres cas utiles
 collision :: Hitbox -> Hitbox -> Bool
 collision (Point x1 y1) (Point x2 y2) =
   x1 == x2 && y1 == y2
+
+collision (Point x y) (Rectangle rx ry w h) =
+  pointInRectangle x y rx ry w h
+collision r@(Rectangle _ _ _ _) p@(Point _ _) = collision p r
 
 collision (Rectangle x1 y1 w1 h1) (Rectangle x2 y2 w2 h2) =
   x1 < x2 + w2 && x2 < x1 + w1 && y1 < y2 + h2 && y2 < y1 + h1
@@ -84,6 +137,13 @@ collision (Point x y) (Disque xc yc r) =
   in sqrt (dx * dx + dy * dy) <= fromIntegral r
 collision d@(Disque _ _ _) p@(Point _ _) = collision p d
 
+collision (Disque x1 y1 r1) (Disque x2 y2 r2) =
+  distanceSquared x1 y1 x2 y2 <= (r1 + r2) * (r1 + r2)
+
+collision (Rectangle rx ry w h) (Disque xc yc r) =
+  collisionRectangleDisque rx ry w h xc yc r
+collision d@(Disque _ _ _) r@(Rectangle _ _ _ _) = collision r d
+
 collision (Composee hs) h = any (`collision` h) hs
 collision h (Composee hs) = any (collision h) hs
 
@@ -92,6 +152,14 @@ collision mur@(MurGauche _) p@(Point _ _) = collision p mur
 
 collision (Point x y) (MurDroit l) = collisionPointMur (>=) x y l
 collision mur@(MurDroit _) p@(Point _ _) = collision p mur
+
+collision (Rectangle rx ry _ h) (MurGauche l) =
+  collisionRectangleMur (<=) max rx ry h l
+collision mur@(MurGauche _) rect@(Rectangle _ _ _ _) = collision rect mur
+
+collision (Rectangle rx ry w h) (MurDroit l) =
+  collisionRectangleMur (>=) min (rx + w - 1) ry h l
+collision mur@(MurDroit _) rect@(Rectangle _ _ _ _) = collision rect mur
 
 collision _ _ = undefined
 
