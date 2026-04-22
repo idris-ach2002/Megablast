@@ -11,57 +11,51 @@ import Objects
 import System.Random (StdGen, mkStdGen, random)
 
 -- Un événement planifié associe un numéro de tour à une action sur la scène.
--- Le script est une liste d'événements triée par tour croissant
-data Evenement = 
-  AppEnnemi    Ennemi        -- apparition d'un ennemi
-  | AppObstacle  Obstacle      
-  | AppProjectile Projectile   
-  | DisparEnnemi   Int         -- disparition de l'ennemi à l'indice donné
-  | DisparObstacle Int         
+-- Le script est une liste d'événements triée par tour croissant.
+data Evenement =
+    AppEnnemi    Ennemi
+  | AppObstacle  Obstacle
+  | AppProjectile Projectile
+  | DisparEnnemi   Int
+  | DisparObstacle Int
   deriving (Eq, Show)
 
 -- Un événement planifié : le tour auquel il doit survenir + l'événement.
 data EvenementPlanifie = EvenementPlanifie
-  { 
-    epTour     :: Int        -- doit être >= 0
+  {
+    epTour      :: Int
   , epEvenement :: Evenement
   } deriving (Eq, Show)
 
 prop_inv_evenement_planifie :: EvenementPlanifie -> Bool
 prop_inv_evenement_planifie ep = epTour ep >= 0
 
-
+-- | Dimensions logiques utilisées par le moteur pour déterminer quand un
+-- objet a quitté la zone de jeu. On évite ainsi les nombres magiques.
+largeurZoneJeu, hauteurZoneJeu, margeHorsEcran :: Int
+largeurZoneJeu = 800
+hauteurZoneJeu = 900
+margeHorsEcran = 100
 
 -- | Le moteur maintient l'intégralité de l'état du jeu à un instant donné.
---
--- Invariant (prop_inv_moteur) :
---   * tous les obstacles, projectiles, ennemis et joueuses vérifient leur
---     propre invariant ;
---   * la cadence de défilement vérifie son invariant ;
---   * le script est trié par tour croissant, chaque événement vérifiant
---     son propre invariant ;
---   * mTour >= 0 ;
---   * il y a au moins une joueuse en vie (vjPv > 0 || vjEssais > 0) pour
---     que la partie continue (cette condition est vérifiée séparément par
---     prop_partie_en_cours).
 data Moteur = Moteur
   { mObstacles   :: [Obstacle]
   , mProjectiles :: [Projectile]
   , mEnnemis     :: [Ennemi]
   , mJoueuses    :: [VaisseauJoueuse]
-  , mCadScroll   :: Cadence            -- cadence du scrolling des obstacles
-  , mScript      :: [EvenementPlanifie]-- événements futurs, triés par epTour
-  , mTour        :: Int                -- numéro du tour courant (>= 0)
-  , mRng         :: StdGen                -- graine pseudo-aléatoire pour les ennemie
+  , mCadScroll   :: Cadence
+  , mScript      :: [EvenementPlanifie]
+  , mTour        :: Int
+  , mRng         :: StdGen
   } deriving (Eq, Show)
 
 prop_inv_moteur :: Moteur -> Bool
 prop_inv_moteur m =
-     all prop_inv_obstacle   (mObstacles   m)
-  && all prop_inv_projectile  (mProjectiles m)
-  && all prop_inv_ennemi      (mEnnemis     m)
-  && all prop_inv_vaisseau    (mJoueuses    m)
-  && prop_inv_cadence         (mCadScroll   m)
+     all prop_inv_obstacle         (mObstacles m)
+  && all prop_inv_projectile       (mProjectiles m)
+  && all prop_inv_ennemi           (mEnnemis m)
+  && all prop_inv_vaisseau         (mJoueuses m)
+  && prop_inv_cadence              (mCadScroll m)
   && mTour m >= 0
   && scriptTrie (mScript m)
   && all prop_inv_evenement_planifie (mScript m)
@@ -74,92 +68,109 @@ prop_partie_en_cours :: Moteur -> Bool
 prop_partie_en_cours m =
   any (\v -> vjPv v > 0 || vjEssais v > 0) (mJoueuses m)
 
--- ---------------------------------------------------------------------------
---  Constructeur intelligent
--- ---------------------------------------------------------------------------
-
 mkMoteur
   :: [Obstacle]
   -> [Projectile]
   -> [Ennemi]
   -> [VaisseauJoueuse]
   -> Cadence
-  -> [EvenementPlanifie]   -- sera trié automatiquement
-  -> Int                   -- tour initial (>= 0)
-  -> Int                   -- graine RNG
+  -> [EvenementPlanifie]
+  -> Int
+  -> Int
   -> Either Text Moteur
 mkMoteur obs projs enns jous cad evts tour seed
-  | not (all prop_inv_obstacle obs)   = Left "mkMoteur: obstacle invalide"
-  | not (all prop_inv_projectile projs) = Left "mkMoteur: projectile invalide"
-  | not (all prop_inv_ennemi enns)    = Left "mkMoteur: ennemi invalide"
-  | not (all prop_inv_vaisseau jous)  = Left "mkMoteur: vaisseau invalide"
-  | not (prop_inv_cadence cad)        = Left "mkMoteur: cadence invalide"
-  | tour < 0                          = Left "mkMoteur: tour negatif"
+  | not (all prop_inv_obstacle obs)      = Left "mkMoteur: obstacle invalide"
+  | not (all prop_inv_projectile projs)  = Left "mkMoteur: projectile invalide"
+  | not (all prop_inv_ennemi enns)       = Left "mkMoteur: ennemi invalide"
+  | not (all prop_inv_vaisseau jous)     = Left "mkMoteur: vaisseau invalide"
+  | not (prop_inv_cadence cad)           = Left "mkMoteur: cadence invalide"
+  | tour < 0                             = Left "mkMoteur: tour negatif"
   | not (all prop_inv_evenement_planifie evts)
-                                      = Left "mkMoteur: evenement invalide"
+                                         = Left "mkMoteur: evenement invalide"
   | otherwise = Right Moteur
       { mObstacles   = obs
       , mProjectiles = projs
       , mEnnemis     = enns
       , mJoueuses    = jous
       , mCadScroll   = cad
-      , mScript      = sortBy (comparing epTour) evts  
+      , mScript      = sortBy (comparing epTour) evts
       , mTour        = tour
       , mRng         = mkStdGen seed
       }
 
--- Application d'un événement du script
+-- | Application d'un événement du script.
 appliquerEvenement :: Evenement -> Moteur -> Moteur
-appliquerEvenement (AppEnnemi e)      m = m { mEnnemis    = mEnnemis    m ++ [e] }
-appliquerEvenement (AppObstacle o)    m = m { mObstacles  = mObstacles  m ++ [o] }
-appliquerEvenement (AppProjectile p)  m = m { mProjectiles= mProjectiles m ++ [p] }
-appliquerEvenement (DisparEnnemi i)   m = m { mEnnemis    = removeAt i (mEnnemis m) }
-appliquerEvenement (DisparObstacle i) m = m { mObstacles  = removeAt i (mObstacles m) }
+appliquerEvenement (AppEnnemi e)      m = m { mEnnemis     = mEnnemis m ++ [e] }
+appliquerEvenement (AppObstacle o)    m = m { mObstacles   = mObstacles m ++ [o] }
+appliquerEvenement (AppProjectile p)  m = m { mProjectiles = mProjectiles m ++ [p] }
+appliquerEvenement (DisparEnnemi i)   m = m { mEnnemis     = removeAt i (mEnnemis m) }
+appliquerEvenement (DisparObstacle i) m = m { mObstacles   = removeAt i (mObstacles m) }
 
--- Suppression par indice (si hors-bornes, liste inchangée)
+-- | Suppression par indice. Si l'indice est invalide, la liste est inchangée.
 removeAt :: Int -> [a] -> [a]
-removeAt _ []     = []
-removeAt 0 (_:xs) = xs
-removeAt n (x:xs) = x : removeAt (n-1) xs
+removeAt i xs
+  | i < 0     = xs
+removeAt _ [] = []
+removeAt 0 (_:rest) = rest
+removeAt n (x:rest) = x : removeAt (n - 1) rest
 
--- ---------------------------------------------------------------------------
---Gestion des collisions
--- ---------------------------------------------------------------------------
+-- | Recherche sûre d'un élément par indice.
+lookupAt :: Int -> [a] -> Maybe a
+lookupAt i _      | i < 0 = Nothing
+lookupAt _ []               = Nothing
+lookupAt 0 (x:_)            = Just x
+lookupAt n (_:xs)           = lookupAt (n - 1) xs
 
--- | Joueuse touchée par un projectile ennemi → perd 1 PV.
---   Renvoie (joueuse mise à jour, projectile supprimé ?).
+-- | Remplacement sûr d'un élément par indice.
+replaceAt :: Int -> a -> [a] -> [a]
+replaceAt i x xs
+  | i < 0     = xs
+replaceAt _ _ [] = []
+replaceAt 0 x (_:xs) = x : xs
+replaceAt n x (y:ys) = y : replaceAt (n - 1) x ys
+
+pvRespawnMinimal :: Int
+pvRespawnMinimal = 1
+
+reapparaitreJoueuse :: VaisseauJoueuse -> VaisseauJoueuse
+reapparaitreJoueuse v
+  | vjPv v > 0      = v
+  | vjEssais v <= 0 = v
+  | otherwise       = v { vjPv = pvRespawnMinimal, vjEssais = vjEssais v - 1 }
+
+-- | Applique un dégât à une joueuse puis gère immédiatement la transition vers
+-- l'état "essai consommé / respawn" quand c'est nécessaire.
+encaisserDegatJoueuse :: VaisseauJoueuse -> VaisseauJoueuse
+encaisserDegatJoueuse = reapparaitreJoueuse . subirDegat
+
 joueuseToucheePar :: VaisseauJoueuse -> Projectile -> (VaisseauJoueuse, Bool)
 joueuseToucheePar v p
   | prOwner p == TirEnnemi
-    && collision (vjHitbox v) (prHitbox p) = (subirDegat v, True)
+    && collision (vjHitbox v) (prHitbox p) = (encaisserDegatJoueuse v, True)
   | otherwise                              = (v, False)
 
--- | Ennemi touché par un projectile joueuse → perd des PV (on retire l'ennemi
---   si ses PV atteignent 0).  Renvoie (ennemi ou Nothing, projectile consommé ?).
 ennemiToucheePar :: Ennemi -> Projectile -> (Maybe Ennemi, Bool)
 ennemiToucheePar e p
   | prOwner p == TirJoueuse
     && collision (eHitbox e) (prHitbox p) =
         let (PV pv) = ePV e
-            pv'     = pv - 1
+            pv' = pv - 1
         in (if pv' > 0 then Just (e { ePV = PV pv' }) else Nothing, True)
   | otherwise = (Just e, False)
 
--- | Joueuse repoussée par un obstacle (collision détectée → recul vers le bas).
 joueuseToucheeObstacle :: VaisseauJoueuse -> Obstacle -> VaisseauJoueuse
 joueuseToucheeObstacle v o
   | collision (vjHitbox v) (obsHitbox o) = repousseVaisseau Haut v
   | otherwise                            = v
 
--- | Traite les collisions pour un tour :
---     1. projectiles ennemis vs joueuses
---     2. projectiles joueuses vs ennemis
---     3. joueuses vs obstacles
---   Renvoie le moteur avec les listes mises à jour.
+joueuseToucheeEnnemi :: VaisseauJoueuse -> Ennemi -> VaisseauJoueuse
+joueuseToucheeEnnemi v e
+  | collision (vjHitbox v) (eHitbox e) = repousseVaisseau Haut (encaisserDegatJoueuse v)
+  | otherwise                          = v
+
 resoudreCollisions :: Moteur -> Moteur
 resoudreCollisions m =
   let
-    -- 1. Projectiles ennemis vs chaque joueuse
     (jous1, projsApresJoueuses) =
       foldr appliquerProjSurJoueuses (mJoueuses m, []) (mProjectiles m)
 
@@ -167,7 +178,7 @@ resoudreCollisions m =
       let (js', consomme) = parcourirJoueuses p js
       in if consomme then (js', acc) else (js', p : acc)
 
-    parcourirJoueuses _ []     = ([], False)
+    parcourirJoueuses _ [] = ([], False)
     parcourirJoueuses p (j:js) =
       let (j', hit) = joueuseToucheePar j p
       in if hit
@@ -175,10 +186,8 @@ resoudreCollisions m =
            else let (js', found) = parcourirJoueuses p js
                 in (j : js', found)
 
-    m1 = m { mJoueuses    = jous1
-           , mProjectiles  = projsApresJoueuses }
+    m1 = m { mJoueuses = jous1, mProjectiles = projsApresJoueuses }
 
-    -- 2. Projectiles joueuses vs ennemis
     (enns2, projsRestes) =
       foldr appliquerProjSurEnnemis (mEnnemis m1, []) (mProjectiles m1)
 
@@ -186,202 +195,175 @@ resoudreCollisions m =
       let (es', consomme) = parcourirEnnemis p es
       in if consomme then (es', acc) else (es', p : acc)
 
-    parcourirEnnemis _ []     = ([], False)
+    parcourirEnnemis _ [] = ([], False)
     parcourirEnnemis p (e:es) =
       let (me', hit) = ennemiToucheePar e p
-          es'        = maybe es (:es) me'  -- remet l'ennemi s'il survit
+          es' = maybe es (:es) me'
       in if hit
            then (es', True)
            else let (es'', found) = parcourirEnnemis p es
                 in (e : es'', found)
 
-    m2 = m1 { mEnnemis     = enns2
-             , mProjectiles = projsRestes }
+    m2 = m1 { mEnnemis = enns2, mProjectiles = projsRestes }
+    jous3 = [ foldl joueuseToucheeObstacle j (mObstacles m2) | j <- mJoueuses m2 ]
+    jous4 = [ foldl joueuseToucheeEnnemi   j (mEnnemis m2)   | j <- jous3 ]
+  in m2 { mJoueuses = jous4 }
 
-    -- 3. Joueuses vs obstacles
-    jous3 = [ foldl joueuseToucheeObstacle j (mObstacles m2)
-            | j <- mJoueuses m2 ]
-
-    m3 = m2 { mJoueuses = jous3 }
-
-  in m3
-
--- ---------------------------------------------------------------------------
--- Propos  Fin de tour global
--- ---------------------------------------------------------------------------
-
--- Précondition
 prop_pre_finDeTourMoteur :: Moteur -> Bool
 prop_pre_finDeTourMoteur m =
   prop_inv_moteur m && prop_partie_en_cours m
 
--- Postcondition
 prop_post_finDeTourMoteur :: Moteur -> Moteur -> Bool
 prop_post_finDeTourMoteur m m' =
      prop_inv_moteur m'
   && mTour m' == mTour m + 1
-  -- le nombre de joueuses est conservé
   && length (mJoueuses m') == length (mJoueuses m)
-  -- tous les projectiles restants sont valides
   && all prop_inv_projectile (mProjectiles m')
 
--- | Avance le jeu d'un tour complet :
---   1. On consomme les événements du script dont le tour est <= mTour.
---   2. On fait avancer les projectiles (finDeTourProjectile).
---   3. On fait défiler les obstacles (finDeTourObstacles).
---   4. On fait jouer les ennemis (finDeTourEnnemi), récupérant leurs nouveaux
---      projectiles.
---   5. On supprime les projectiles sortis de l'écran (hors bornes grossières).
---   6. On résout les collisions.
---   7. On incrémente le tour et la graine RNG.
-finDeTourMoteur :: Moteur -> Moteur
-finDeTourMoteur m
-  | not (prop_inv_moteur m) = error "finDeTourMoteur: invariant moteur violé"
+-- | Version sûre de la fin de tour. Elle rend explicite l'échec par `Either`
+-- au lieu de supposer implicitement que l'invariant est déjà respecté.
+finDeTourMoteurEither :: Moteur -> Either Text Moteur
+finDeTourMoteurEither m
+  | not (prop_inv_moteur m) = Left "finDeTourMoteur: invariant moteur violé"
   | otherwise =
       let tourActuel = mTour m
-
-          -- 1. Événements du script prévus pour ce tour (ou avant)
-          (evtsNow, evtsFutur) =
-            partition (\ep -> epTour ep <= tourActuel) (mScript m)
+          (evtsNow, evtsFutur) = partition (\ep -> epTour ep <= tourActuel) (mScript m)
           m0 = foldr (appliquerEvenement . epEvenement) m evtsNow
           m1 = m0 { mScript = evtsFutur }
 
-          -- 2. Avancement des projectiles existants
           projs' = map finDeTourProjectile (mProjectiles m1)
-
-          -- 3. Défilement des obstacles
           (cadScroll', obs') = finDeTourObstacles (mCadScroll m1) (mObstacles m1)
 
-          -- 4. Tour des ennemis : actions + nouveaux projectiles
           rng = mRng m1
           (graineEnnemis, rngNext) = random rng :: (Int, StdGen)
-
           (enns', newProjs) = unzip $ map (finDeTourEnnemi graineEnnemis) (mEnnemis m1)
-          projsEnnemis      = [ p | Just p <- newProjs ]
+          projsEnnemis = [ p | Just p <- newProjs ]
 
-          -- 5. Assemblage et filtrage des projectiles hors écran
           tousProjs = projs' ++ projsEnnemis
-          projsValides = filter (not . horsEcranGrossier . prHitbox) tousProjs
+          projsValides = filter (not . horsEcranMoteur . prHitbox) tousProjs
 
-          -- 6. Collisions
           m2 = resoudreCollisions
-                 (m1 { mObstacles   = obs'
-                     , mProjectiles = projsValides
-                     , mEnnemis     = enns'
-                     , mCadScroll   = cadScroll'
-                     })
+                (m1 { mObstacles   = obs'
+                    , mProjectiles = projsValides
+                    , mEnnemis     = enns'
+                    , mCadScroll   = cadScroll'
+                    })
 
-          -- 7. Incréments
-          m3 = m2 { mTour = tourActuel + 1
-                  , mRng  = rngNext }
+          m3 = m2 { mTour = tourActuel + 1, mRng = rngNext }
+      in Right m3
 
-      in m3
+-- | Version historique conservée pour le reste du code. En cas d'entrée
+-- invalide, on renvoie l'état inchangé : la version `Either` ci-dessus est à
+-- privilégier quand on veut rendre le contrat explicite.
+finDeTourMoteur :: Moteur -> Moteur
+finDeTourMoteur m =
+  case finDeTourMoteurEither m of
+    Right m' -> m'
+    Left _   -> m
 
--- | Heuristique : une hitbox est considérée hors-écran si elle dépasse les
---   bornes [-100, 2000] sur chaque axe.  On ne connaît pas la taille exacte
---   de l'écran dans le moteur ; les parties supérieures/inférieures à ces
---   valeurs ne sont de toute façon jamais visibles.
-horsEcranGrossier :: Hitbox -> Bool
-horsEcranGrossier (Point x y)         = x < -100 || x > 2000 || y < -100 || y > 2000
-horsEcranGrossier (Disque xc yc r)    = yc + r < -100 || yc - r > 2000
-horsEcranGrossier (Rectangle x y w h) = x + w < -100 || x > 2000
-                                      || y + h < -100 || y > 2000
-horsEcranGrossier (Composee hs)       = all horsEcranGrossier hs
-horsEcranGrossier _                   = False  -- murs : toujours présents
+-- | Détermine si une hitbox est hors de l'écran logique du moteur.
+-- Les murs ne sont pas supprimés, car ils définissent les bords du niveau.
+horsEcranHitbox :: Int -> Int -> Int -> Hitbox -> Bool
+horsEcranHitbox largeur hauteur marge (Point x y) =
+  x < (-marge) || x > largeur + marge || y < (-marge) || y > hauteur + marge
+horsEcranHitbox largeur hauteur marge (Disque xc yc r) =
+  xc + r < (-marge) || xc - r > largeur + marge
+  || yc + r < (-marge) || yc - r > hauteur + marge
+horsEcranHitbox largeur hauteur marge (Rectangle x y w h) =
+  x + w < (-marge) || x > largeur + marge
+  || y + h < (-marge) || y > hauteur + marge
+horsEcranHitbox largeur hauteur marge (Composee hs) =
+  all (horsEcranHitbox largeur hauteur marge) hs
+horsEcranHitbox _ _ _ _ = False
 
--- ---------------------------------------------------------------------------
--- Gestion des commandes joueuse
--- ---------------------------------------------------------------------------
+horsEcranMoteur :: Hitbox -> Bool
+horsEcranMoteur = horsEcranHitbox largeurZoneJeu hauteurZoneJeu margeHorsEcran
+
+-- | Précondition naturelle d'application d'une commande : indice valide,
+-- moteur valide, cadence de tir valide.
+prop_pre_appliquerCommande :: Int -> Action -> Cadence -> Moteur -> Bool
+prop_pre_appliquerCommande i _ cad m =
+  prop_inv_moteur m && prop_inv_cadence cad && i >= 0 && i < length (mJoueuses m)
+
+prop_post_appliquerCommande :: Int -> Action -> Cadence -> Moteur -> (Moteur, Maybe Projectile) -> Bool
+prop_post_appliquerCommande _ _ _ _ (m', mp) =
+  prop_inv_moteur m' && maybe True prop_inv_projectile mp
 
 -- | Applique une commande à la joueuse d'indice i dans le moteur.
---   Renvoie le moteur mis à jour (et le projectile créé si c'est un Tir).
+-- Si l'indice est invalide, on ne modifie pas le moteur : le contrat est donc
+-- explicite et la fonction n'est plus partielle.
 appliquerCommande :: Int -> Action -> Cadence -> Moteur -> (Moteur, Maybe Projectile)
-appliquerCommande i Attendre _ m = (m, Nothing)
+appliquerCommande _ Attendre _ m = (m, Nothing)
 appliquerCommande i (Deplacer d) _ m =
-  let jous = mJoueuses m
-      v    = jous !! i
-      v'   = deplaceVaisseau d v
-      -- Repousser si collision avec un mur ou un obstacle après déplacement
-      v'' = foldl joueuseToucheeObstacle v' (mObstacles m)
-  in (m { mJoueuses = replaceAt i v'' jous }, Nothing)
+  case lookupAt i (mJoueuses m) of
+    Nothing -> (m, Nothing)
+    Just v  ->
+      let v' = deplaceVaisseau d v
+          v'' = foldl joueuseToucheeObstacle v' (mObstacles m)
+      in (m { mJoueuses = replaceAt i v'' (mJoueuses m) }, Nothing)
 appliquerCommande i Tirer cadTir m =
-  let jous = mJoueuses m
-      v    = jous !! i
-      p    = tirVaisseau v cadTir
-  in (m { mProjectiles = mProjectiles m ++ [p] }, Just p)
+  case lookupAt i (mJoueuses m) of
+    Nothing -> (m, Nothing)
+    Just v  ->
+      let p = tirVaisseau v cadTir
+      in (m { mProjectiles = mProjectiles m ++ [p] }, Just p)
 
-replaceAt :: Int -> a -> [a] -> [a]
-replaceAt _ _ []     = []
-replaceAt 0 x (_:xs) = x : xs
-replaceAt n x (y:ys) = y : replaceAt (n-1) x ys
-
--- ---------------------------------------------------------------------------
--- Exemple / jeu de tests
--- ---------------------------------------------------------------------------
-
--- Moteur de départ minimaliste pour les tests.
 exempleMoteur :: Either Text Moteur
 exempleMoteur = do
-  cad      <- mkCadence 3           -- défilement toutes les 3 tours
+  cad <- mkCadence 3
   hVaisseau <- mkRectangle 50 20 10 10
-  cadV     <- mkCadence 1
-  vaisseau <- mkVaisseauJoueuse hVaisseau 5 2 cadV
-  vaisseau2 <- mkVaisseauJoueuse hVaisseau 5 2 cadV
-  hObs     <- mkRectangle 30 300 40 20
-  obs      <- mkObstacle hObs
+  cadV <- mkCadence 1
+  vaisseau <- mkVaisseauJoueuse hVaisseau 1 2 cadV
+  vaisseau2 <- mkVaisseauJoueuse hVaisseau 1 2 cadV
+  hObs <- mkRectangle 30 300 40 20
+  obs <- mkObstacle hObs
   let oracle = Scripted [Attendre, Deplacer Gauche, Tirer] 0
-  pv       <- mkPV 3
-  cadEnn   <- mkCadence 2
-  hEnn     <- mkRectangle 60 500 12 12
-  enn      <- mkEnnemi hEnn pv oracle cadEnn
+  pv <- mkPV 3
+  cadEnn <- mkCadence 2
+  hEnn <- mkRectangle 60 500 12 12
+  enn <- mkEnnemi hEnn pv oracle cadEnn
   mkMoteur
     [obs]
     []
     [enn]
     [vaisseau, vaisseau2]
     cad
-    [ EvenementPlanifie 5 (AppObstacle obs)  -- un obstacle apparaît au tour 5
-    , EvenementPlanifie 10 (DisparEnnemi 0)   -- l'ennemi 0 disparaît au tour 10
+    [ EvenementPlanifie 5  (AppObstacle obs)
+    , EvenementPlanifie 10 (DisparEnnemi 0)
     ]
     0
     42
 
--- | Propriété : finDeTourMoteur incrémente le tour de 1.
 prop_tour_incremente :: Moteur -> Bool
 prop_tour_incremente m
-  | not (prop_inv_moteur m) = True   -- hypothèse non vérifiée : on ne teste pas
+  | not (prop_inv_moteur m)   = True
   | not (prop_partie_en_cours m) = True
   | otherwise = mTour (finDeTourMoteur m) == mTour m + 1
 
--- | Propriété : finDeTourMoteur préserve l'invariant du moteur.
 prop_invariant_preserve :: Moteur -> Bool
 prop_invariant_preserve m
-  | not (prop_inv_moteur m) = True
+  | not (prop_inv_moteur m)   = True
   | not (prop_partie_en_cours m) = True
   | otherwise = prop_inv_moteur (finDeTourMoteur m)
 
--- | Propriété : le nombre de joueuses ne change pas après un tour.
 prop_joueuses_stables :: Moteur -> Bool
 prop_joueuses_stables m
-  | not (prop_inv_moteur m) = True
+  | not (prop_inv_moteur m)   = True
   | not (prop_partie_en_cours m) = True
-  | otherwise =
-      length (mJoueuses (finDeTourMoteur m)) == length (mJoueuses m)
+  | otherwise = length (mJoueuses (finDeTourMoteur m)) == length (mJoueuses m)
 
--- | Propriété : le script perd les événements passés après finDeTourMoteur.
 prop_script_diminue :: Moteur -> Bool
 prop_script_diminue m
-  | not (prop_inv_moteur m) = True
+  | not (prop_inv_moteur m)   = True
   | not (prop_partie_en_cours m) = True
   | otherwise =
       let m' = finDeTourMoteur m
           t' = mTour m'
-      in all (\ep -> epTour ep > t') (mScript m')  -- plus d'événements en retard
+      in all (\ep -> epTour ep > t') (mScript m')
 
 -- | Preuve informelle de prop_tour_incremente :
 --
 --   Soit m un moteur vérifiant prop_inv_moteur et prop_partie_en_cours.
---   Par définition de finDeTourMoteur, la dernière étape (étape 7) pose :
---     mTour m3 = tourActuel + 1
---   où tourActuel = mTour m.
---   Donc mTour (finDeTourMoteur m) = mTour m + 1.  
+--   Par définition de finDeTourMoteur, la dernière étape pose :
+--     mTour m' = mTour m + 1
+--   Donc mTour (finDeTourMoteur m) = mTour m + 1.
