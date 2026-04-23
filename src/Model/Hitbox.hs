@@ -1,10 +1,10 @@
 {- HLINT ignore "Use camelCase" -}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hitbox where
+module Model.Hitbox where
 
 import Data.Text (Text)
-import Lib
+import Model.Lib
 
 data Hitbox
   = Point Int Int

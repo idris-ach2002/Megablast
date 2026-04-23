@@ -1,12 +1,12 @@
 {- HLINT ignore "Use camelCase" -}
 
-module Controller where
+module Controller.Controller where
 
 import Graphics.Gloss.Interface.Pure.Game
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Objects
-import Engine
+import Model.Objects
+import Model.Engine
 
 ---------------------------------------------------------------------------------
 -- État global de l'application

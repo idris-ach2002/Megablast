@@ -1,13 +1,13 @@
 {- HLINT ignore "Use camelCase" -}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Engine where
+module Model.Engine where
 
 import Data.List  (partition, sortBy)
 import Data.Ord   (comparing)
 import Data.Text  (Text)
-import Hitbox
-import Objects
+import Model.Hitbox
+import Model.Objects
 import System.Random (StdGen, mkStdGen, random)
 
 -- Un événement planifié associe un numéro de tour à une action sur la scène.

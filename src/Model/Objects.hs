@@ -2,11 +2,11 @@
 {- HLINT ignore "Use camelCase" -}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Objects where
+module Model.Objects where
 
-import Lib
+import Model.Lib
 import Data.Text (Text)
-import Hitbox
+import Model.Hitbox
 
 ---------------------------------------------------------------------------------
 --- Partie 3 : Obstacles / Projectiles / Tour

@@ -2,10 +2,10 @@ module Main where
 
 import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game
-import Engine
-import Objects
-import View
-import Controller
+import Model.Engine
+import Model.Objects
+import View.View
+import Controller.Controller
 
 ---------------------------------------------------------------------------------
 -- Fenêtre Gloss

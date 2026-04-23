@@ -25,13 +25,13 @@ source-repository head
 
 library
   exposed-modules:
-      Controller
-      Engine
-      Hitbox
-      Lib
-      Murs
-      Objects
-      View
+      Controller.Controller
+      Model.Engine
+      Model.Hitbox
+      Model.Lib
+      Model.Murs
+      Model.Objects
+      View.View
   other-modules:
       Paths_MegablastXenon2
   autogen-modules:

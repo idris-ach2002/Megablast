@@ -5,7 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-module Lib
+module Model.Lib
   ( 
   -- Utilitaires
    tshow

@@ -1,11 +1,11 @@
 {- HLINT ignore "Use camelCase" -}
 
-module View where
+module View.View where
 
 import Graphics.Gloss
-import Hitbox
-import Objects
-import Engine
+import Model.Hitbox
+import Model.Objects
+import Model.Engine
 
 ---------------------------------------------------------------------------------
 -- Constantes visuelles
@@ -64,7 +64,7 @@ dessinerHitbox c (Disque xc yc r) =
   let (gx, gy) = toGloss xc yc
   in color c $ translate gx gy $ circleSolid (fromIntegral r)
 
-dessinerHitbox c (Hitbox.Rectangle x y w h) =
+dessinerHitbox c (Model.Hitbox.Rectangle x y w h) =
   let (gx, gy) = toGloss x y
       fw = fromIntegral w
       fh = fromIntegral h

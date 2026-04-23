@@ -1,12 +1,12 @@
 {- HLINT ignore "Use camelCase" -}
 
-module Murs where
+module Model.Murs where
 
-import Hitbox
+import Model.Hitbox
 
 -- | Symétrie horizontale d'une liste de points par rapport à la droite x = largeur / 2.
 --   Un point (x,y) devient (largeur - x, y).
-  symetrie_points :: Int -> [(Int, Int)] -> [(Int, Int)]
+symetrie_points :: Int -> [(Int, Int)] -> [(Int, Int)]
 symetrie_points largeur = fmap (\(x, y) -> (largeur - x, y))
 
 -- | Construit un mur droit comme symétrique d'un mur gauche.
