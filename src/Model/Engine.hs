@@ -7,6 +7,7 @@ import Data.List  (partition, sortBy)
 import Data.Ord   (comparing)
 import Data.Text  (Text)
 import Model.Hitbox
+import Model.Murs
 import Model.Objects
 import Model.VaisseauForme
 import System.Random (StdGen, mkStdGen, random)
@@ -38,12 +39,49 @@ largeurZoneJeu = 800
 hauteurZoneJeu = 900
 margeHorsEcran = 100
 
+---------------------------------------------------------------------------------
+--- Murs du niveau
+---------------------------------------------------------------------------------
+
+data MursNiveau = MursNiveau
+  { mnMurGauche :: Hitbox
+  , mnMurDroit  :: Hitbox
+  } deriving (Eq, Show)
+
+estMurGauche :: Hitbox -> Bool
+estMurGauche (MurGauche _) = True
+estMurGauche _             = False
+
+estMurDroit :: Hitbox -> Bool
+estMurDroit (MurDroit _) = True
+estMurDroit _            = False
+
+prop_inv_mursNiveau :: MursNiveau -> Bool
+prop_inv_mursNiveau murs =
+     estMurGauche (mnMurGauche murs)
+  && estMurDroit  (mnMurDroit murs)
+  && prop_inv_hitbox (mnMurGauche murs)
+  && prop_inv_hitbox (mnMurDroit murs)
+
+mkMursNiveau :: Hitbox -> Hitbox -> Either Text MursNiveau
+mkMursNiveau murG murD
+  | not (estMurGauche murG) = Left "mkMursNiveau: le mur gauche doit etre un MurGauche"
+  | not (estMurDroit murD)  = Left "mkMursNiveau: le mur droit doit etre un MurDroit"
+  | not (prop_inv_hitbox murG) = Left "mkMursNiveau: mur gauche invalide"
+  | not (prop_inv_hitbox murD) = Left "mkMursNiveau: mur droit invalide"
+  | otherwise = Right (MursNiveau murG murD)
+
+---------------------------------------------------------------------------------
+--- Moteur
+---------------------------------------------------------------------------------
+
 -- | Le moteur maintient l'intégralité de l'état du jeu à un instant donné.
 data Moteur = Moteur
   { mObstacles   :: [Obstacle]
   , mProjectiles :: [Projectile]
   , mEnnemis     :: [Ennemi]
   , mJoueuses    :: [VaisseauJoueuse]
+  , mMurs        :: MursNiveau
   , mCadScroll   :: Cadence
   , mScript      :: [EvenementPlanifie]
   , mTour        :: Int
@@ -52,11 +90,12 @@ data Moteur = Moteur
 
 prop_inv_moteur :: Moteur -> Bool
 prop_inv_moteur m =
-     all prop_inv_obstacle         (mObstacles m)
-  && all prop_inv_projectile       (mProjectiles m)
-  && all prop_inv_ennemi           (mEnnemis m)
-  && all prop_inv_vaisseau         (mJoueuses m)
-  && prop_inv_cadence              (mCadScroll m)
+     all prop_inv_obstacle           (mObstacles m)
+  && all prop_inv_projectile         (mProjectiles m)
+  && all prop_inv_ennemi             (mEnnemis m)
+  && all prop_inv_vaisseau           (mJoueuses m)
+  && prop_inv_mursNiveau             (mMurs m)
+  && prop_inv_cadence                (mCadScroll m)
   && mTour m >= 0
   && scriptTrie (mScript m)
   && all prop_inv_evenement_planifie (mScript m)
@@ -74,16 +113,18 @@ mkMoteur
   -> [Projectile]
   -> [Ennemi]
   -> [VaisseauJoueuse]
+  -> MursNiveau
   -> Cadence
   -> [EvenementPlanifie]
   -> Int
   -> Int
   -> Either Text Moteur
-mkMoteur obs projs enns jous cad evts tour seed
+mkMoteur obs projs enns jous murs cad evts tour seed
   | not (all prop_inv_obstacle obs)      = Left "mkMoteur: obstacle invalide"
   | not (all prop_inv_projectile projs)  = Left "mkMoteur: projectile invalide"
   | not (all prop_inv_ennemi enns)       = Left "mkMoteur: ennemi invalide"
   | not (all prop_inv_vaisseau jous)     = Left "mkMoteur: vaisseau invalide"
+  | not (prop_inv_mursNiveau murs)       = Left "mkMoteur: murs invalides"
   | not (prop_inv_cadence cad)           = Left "mkMoteur: cadence invalide"
   | tour < 0                             = Left "mkMoteur: tour negatif"
   | not (all prop_inv_evenement_planifie evts)
@@ -93,6 +134,7 @@ mkMoteur obs projs enns jous cad evts tour seed
       , mProjectiles = projs
       , mEnnemis     = enns
       , mJoueuses    = jous
+      , mMurs        = murs
       , mCadScroll   = cad
       , mScript      = sortBy (comparing epTour) evts
       , mTour        = tour
@@ -169,6 +211,21 @@ joueuseToucheeEnnemi v e
   | collision (vjHitbox v) (eHitbox e) = repousseVaisseau Haut (encaisserDegatJoueuse v)
   | otherwise                          = v
 
+joueuseToucheeMurGauche :: Hitbox -> VaisseauJoueuse -> VaisseauJoueuse
+joueuseToucheeMurGauche mur v
+  | collision (vjHitbox v) mur = repousseVaisseau Gauche v
+  | otherwise                  = v
+
+joueuseToucheeMurDroit :: Hitbox -> VaisseauJoueuse -> VaisseauJoueuse
+joueuseToucheeMurDroit mur v
+  | collision (vjHitbox v) mur = repousseVaisseau Droite v
+  | otherwise                  = v
+
+joueuseToucheeMurs :: MursNiveau -> VaisseauJoueuse -> VaisseauJoueuse
+joueuseToucheeMurs murs =
+  joueuseToucheeMurDroit (mnMurDroit murs)
+  . joueuseToucheeMurGauche (mnMurGauche murs)
+
 resoudreCollisions :: Moteur -> Moteur
 resoudreCollisions m =
   let
@@ -208,7 +265,8 @@ resoudreCollisions m =
     m2 = m1 { mEnnemis = enns2, mProjectiles = projsRestes }
     jous3 = [ foldl joueuseToucheeObstacle j (mObstacles m2) | j <- mJoueuses m2 ]
     jous4 = [ foldl joueuseToucheeEnnemi   j (mEnnemis m2)   | j <- jous3 ]
-  in m2 { mJoueuses = jous4 }
+    jous5 = map (joueuseToucheeMurs (mMurs m2)) jous4
+  in m2 { mJoueuses = jous5 }
 
 prop_pre_finDeTourMoteur :: Moteur -> Bool
 prop_pre_finDeTourMoteur m =
@@ -270,7 +328,7 @@ horsEcranHitbox largeur hauteur marge (Point x y) =
 horsEcranHitbox largeur hauteur marge (Disque xc yc r) =
   xc + r < (-marge) || xc - r > largeur + marge
   || yc + r < (-marge) || yc - r > hauteur + marge
-horsEcranHitbox largeur hauteur marge (Rectangle x y w h) =
+horsEcranHitbox largeur hauteur marge (Model.Hitbox.Rectangle x y w h) =
   x + w < (-marge) || x > largeur + marge
   || y + h < (-marge) || y > hauteur + marge
 horsEcranHitbox largeur hauteur marge (Composee hs) =
@@ -301,7 +359,8 @@ appliquerCommande i (Deplacer d) _ m =
     Just v  ->
       let v' = deplaceVaisseau d v
           v'' = foldl joueuseToucheeObstacle v' (mObstacles m)
-      in (m { mJoueuses = replaceAt i v'' (mJoueuses m) }, Nothing)
+          v''' = joueuseToucheeMurs (mMurs m) v''
+      in (m { mJoueuses = replaceAt i v''' (mJoueuses m) }, Nothing)
 appliquerCommande i Tirer cadTir m =
   case lookupAt i (mJoueuses m) of
     Nothing -> (m, Nothing)
@@ -320,6 +379,9 @@ exempleMoteur = do
   hObs <- mkRectangle 30 300 40 20
   obs <- mkObstacle hObs
   let oracle = Scripted [Attendre, Deplacer Gauche, Tirer] 0
+      murGauche = mur_gauche_dents_scie 50 60
+      murDroit  = mur_droit_dents_scie largeurZoneJeu 50 60
+  murs <- mkMursNiveau murGauche murDroit
   pv <- mkPV 3
   cadEnn <- mkCadence 2
   hEnn <- mkRectangle 60 500 12 12
@@ -329,6 +391,7 @@ exempleMoteur = do
     []
     [enn]
     [vaisseau, vaisseau2]
+    murs
     cad
     [ EvenementPlanifie 5  (AppObstacle obs)
     , EvenementPlanifie 10 (DisparEnnemi 0)
@@ -338,25 +401,25 @@ exempleMoteur = do
 
 prop_tour_incremente :: Moteur -> Bool
 prop_tour_incremente m
-  | not (prop_inv_moteur m)   = True
+  | not (prop_inv_moteur m)      = True
   | not (prop_partie_en_cours m) = True
   | otherwise = mTour (finDeTourMoteur m) == mTour m + 1
 
 prop_invariant_preserve :: Moteur -> Bool
 prop_invariant_preserve m
-  | not (prop_inv_moteur m)   = True
+  | not (prop_inv_moteur m)      = True
   | not (prop_partie_en_cours m) = True
   | otherwise = prop_inv_moteur (finDeTourMoteur m)
 
 prop_joueuses_stables :: Moteur -> Bool
 prop_joueuses_stables m
-  | not (prop_inv_moteur m)   = True
+  | not (prop_inv_moteur m)      = True
   | not (prop_partie_en_cours m) = True
   | otherwise = length (mJoueuses (finDeTourMoteur m)) == length (mJoueuses m)
 
 prop_script_diminue :: Moteur -> Bool
 prop_script_diminue m
-  | not (prop_inv_moteur m)   = True
+  | not (prop_inv_moteur m)      = True
   | not (prop_partie_en_cours m) = True
   | otherwise =
       let m' = finDeTourMoteur m
