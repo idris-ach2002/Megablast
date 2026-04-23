@@ -1,3 +1,5 @@
 * Disparaitre la joueuse quand essai = 0
 
-* 
+* voir les erreurs pour les tests qui ne passe pas 
+
+** à long terme mettre des export explicite et enlever dans .cabal le fait qu'on ignore le warning

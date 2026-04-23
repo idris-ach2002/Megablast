@@ -3,16 +3,17 @@
 module Main where
 
 import Lib
-import SpecHelpers 
-import qualified VaisseauSpec
+import SpecHelpers
+import qualified EngineSpec
 import qualified HitboxSpec
+import qualified VaisseauSpec
 
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
 
-import Objects
 import Hitbox
+import Objects
 
 main :: IO ()
 main = hspec $ do
@@ -36,6 +37,7 @@ main = hspec $ do
 
   describe "Tests des collisions" $ do
     HitboxSpec.spec
+    
   describe "Cadence" $ do
     prop "tickCadence préserve l'invariant" $
       forAll genCadence $ \c ->
@@ -81,5 +83,7 @@ main = hspec $ do
         in prop_inv_ennemi e'
 
   describe "Tests du Vaisseau" $ do
-    VaisseauSpec.spec 
+    VaisseauSpec.spec
 
+  describe "Tests du Moteur" $ do
+    EngineSpec.spec
