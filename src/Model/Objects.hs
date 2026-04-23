@@ -1,19 +1,17 @@
-
 {- HLINT ignore "Use camelCase" -}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Model.Objects where
 
-import Model.Lib
 import Data.Text (Text)
 import Model.Hitbox
+import Model.Lib
+import Model.VaisseauForme
 
 ---------------------------------------------------------------------------------
 --- Partie 3 : Obstacles / Projectiles / Tour
 ---------------------------------------------------------------------------------
 
---FIXME: d'après ce que j'ai compris, il faut définir un type somme object dans lequel tu met obstacle, prjectile et Joueuse ?
- 
 data Direction = Droite | Haut | Gauche | Bas
   deriving (Eq, Show, Enum, Bounded)
 
@@ -25,7 +23,7 @@ dirVector Droite = (1, 0)
 
 -- Cadence: attente>0, restant ∈ [0..attente-1], restant==0 => bouge maintenant
 -- attente = N (tous les combien de tours on bouge)
---restant = compteur interne “combien de tours avant le prochain mouvement”
+-- restant = compteur interne "combien de tours avant le prochain mouvement"
 data Cadence = Cadence { attente :: Int, restant :: Int }
   deriving (Eq, Show)
 
@@ -79,10 +77,9 @@ mkObstacle h
 defileObstacle :: Obstacle -> Obstacle
 defileObstacle (Obstacle h) = Obstacle (translateHitbox 0 (-1) h)
 
---NOTE: ça sert à quoi de distinguer le projectile appartien à qui ?
 data ProjectileOwner = TirJoueuse | TirEnnemi
   deriving (Eq, Show, Enum, Bounded)
---NOTE: a voir pour la suite si on a vraiment besoin de ProjectileOwner
+
 data Projectile = Projectile
   { prHitbox  :: Hitbox
   , prDir     :: Direction
@@ -151,40 +148,47 @@ prop_post_finDeTourObstacles _ _ (cad', obs') =
 ---------------------------------------------------------------------------------
 --- Partie 4 : Joueuses
 ---------------------------------------------------------------------------------
+
 data Action = Deplacer Direction | Tirer | Attendre
   deriving (Eq, Show)
 
-data VaisseauJoueuse = VaisseauJoueuse{ 
-  vjHitbox  :: Hitbox
+data VaisseauJoueuse = VaisseauJoueuse
+  { vjForme   :: PartiesVaisseau
   , vjPv      :: Int
   , vjEssais  :: Int
-  , vjCadence :: Cadence -- vitesse 
+  , vjCadence :: Cadence
   } deriving (Eq, Show)
+
+vjHitbox :: VaisseauJoueuse -> Hitbox
+vjHitbox = hitboxPartiesVaisseau . vjForme
+
+vjHitboxTir :: VaisseauJoueuse -> Hitbox
+vjHitboxTir = hitboxTirPartiesVaisseau . vjForme
 
 prop_inv_vaisseau :: VaisseauJoueuse -> Bool
 prop_inv_vaisseau v =
-  prop_inv_hitbox (vjHitbox v)
+  prop_inv_partiesVaisseau (vjForme v)
+  && prop_inv_hitbox (vjHitbox v)
   && vjPv v >= 0
   && vjEssais v >= 0
   && prop_inv_cadence (vjCadence v)
 
-mkVaisseauJoueuse :: Hitbox -> Int -> Int -> Cadence -> Either Text VaisseauJoueuse
-mkVaisseauJoueuse h pv essais cad
-  | not (prop_inv_hitbox h)  = Left "Vaisseau: Hitbox invalide"
-  | pv < 0                   = Left "Vaisseau: Points de vie negatifs"
-  | essais < 0               = Left "Vaisseau: Nombre d'essais negatif"
-  | not (prop_inv_cadence cad) = Left "Vaisseau: Cadence invalide"
-  | otherwise                = Right (VaisseauJoueuse h pv essais cad)
+mkVaisseauJoueuse :: PartiesVaisseau -> Int -> Int -> Cadence -> Either Text VaisseauJoueuse
+mkVaisseauJoueuse forme pv essais cad
+  | not (prop_inv_partiesVaisseau forme) = Left "Vaisseau: forme invalide"
+  | pv < 0                               = Left "Vaisseau: Points de vie negatifs"
+  | essais < 0                           = Left "Vaisseau: Nombre d'essais negatif"
+  | not (prop_inv_cadence cad)           = Left "Vaisseau: Cadence invalide"
+  | otherwise                            = Right (VaisseauJoueuse forme pv essais cad)
 
 deplaceVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse
 deplaceVaisseau d v =
   let (dx, dy) = dirVector d
-  in v { vjHitbox = translateHitbox dx dy (vjHitbox v) }
+  in v { vjForme = translatePartiesVaisseau dx dy (vjForme v) }
 
 prop_pre_deplaceVaisseau :: Direction -> VaisseauJoueuse -> Bool
 prop_pre_deplaceVaisseau _ = prop_inv_vaisseau
 
--- TODO: Normalement on doit vérifier la translation
 prop_post_deplaceVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse -> Bool
 prop_post_deplaceVaisseau _ v v' =
      prop_inv_vaisseau v'
@@ -192,16 +196,15 @@ prop_post_deplaceVaisseau _ v v' =
   && vjEssais v' == vjEssais v
   && vjCadence v' == vjCadence v
 
--- Si on est repossé on se déplace vers la direction opposée
+-- Si on est repoussé on se déplace vers la direction opposée.
 repousseVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse
 repousseVaisseau d v =
   let (dx, dy) = dirVector d
-  in v { vjHitbox = translateHitbox (-dx) (-dy) (vjHitbox v) }
+  in v { vjForme = translatePartiesVaisseau (-dx) (-dy) (vjForme v) }
 
 prop_pre_repousseVaisseau :: Direction -> VaisseauJoueuse -> Bool
 prop_pre_repousseVaisseau _  = prop_inv_vaisseau
 
--- Si on repousse le vaisseau, un déplacement dans cette même direction devrait nous ramener à la position exacte (v)
 prop_post_repousseVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse -> Bool
 prop_post_repousseVaisseau d v v' =
      prop_inv_vaisseau v'
@@ -210,14 +213,14 @@ prop_post_repousseVaisseau d v v' =
 tirVaisseau :: VaisseauJoueuse -> Cadence -> Projectile
 tirVaisseau v cadProj =
   Projectile
-    { prHitbox  = vjHitbox v -- Le projectile part de la position du vaisseau
-    , prDir     = Haut       
+    { prHitbox  = vjHitboxTir v
+    , prDir     = Haut
     , prCadence = cadProj
     , prOwner   = TirJoueuse
     }
 
 prop_pre_tirVaisseau :: VaisseauJoueuse -> Cadence -> Bool
-prop_pre_tirVaisseau v cadProj = 
+prop_pre_tirVaisseau v cadProj =
   prop_inv_vaisseau v && prop_inv_cadence cadProj
 
 prop_post_tirVaisseau :: VaisseauJoueuse -> Cadence -> Projectile -> Bool
@@ -243,8 +246,8 @@ prop_post_subirDegat v v' =
 ---------------------------------------------------------------------------------
 
 data Oracle
-  = Scripted [Action] Int     -- liste cyclique + index
-  | FromInt                   -- action déterminée par l'int du moteur
+  = Scripted [Action] Int
+  | FromInt
   deriving (Eq, Show)
 
 prop_inv_oracle :: Oracle -> Bool

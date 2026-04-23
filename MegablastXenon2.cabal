@@ -31,6 +31,7 @@ library
       Model.Lib
       Model.Murs
       Model.Objects
+      Model.VaisseauForme
       View.View
   other-modules:
       Paths_MegablastXenon2

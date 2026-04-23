@@ -8,6 +8,7 @@ import Data.Ord   (comparing)
 import Data.Text  (Text)
 import Model.Hitbox
 import Model.Objects
+import Model.VaisseauForme
 import System.Random (StdGen, mkStdGen, random)
 
 -- Un événement planifié associe un numéro de tour à une action sur la scène.
@@ -311,10 +312,11 @@ appliquerCommande i Tirer cadTir m =
 exempleMoteur :: Either Text Moteur
 exempleMoteur = do
   cad <- mkCadence 3
-  hVaisseau <- mkRectangle 50 20 10 10
+  formeVaisseau1 <- mkPartiesVaisseauStandard 50 20
+  formeVaisseau2 <- mkPartiesVaisseauStandard 90 20
   cadV <- mkCadence 1
-  vaisseau <- mkVaisseauJoueuse hVaisseau 1 2 cadV
-  vaisseau2 <- mkVaisseauJoueuse hVaisseau 1 2 cadV
+  vaisseau <- mkVaisseauJoueuse formeVaisseau1 1 2 cadV
+  vaisseau2 <- mkVaisseauJoueuse formeVaisseau2 1 2 cadV
   hObs <- mkRectangle 30 300 40 20
   obs <- mkObstacle hObs
   let oracle = Scripted [Attendre, Deplacer Gauche, Tirer] 0
