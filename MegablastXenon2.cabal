@@ -32,6 +32,10 @@ library
       Model.Murs
       Model.Objects
       Model.VaisseauForme
+      View.FormesView
+      View.HitboxView
+      View.Theme
+      View.VaisseauView
       View.View
   other-modules:
       Paths_MegablastXenon2

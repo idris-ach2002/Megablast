@@ -83,10 +83,11 @@ prop_post_hitboxPartiesVaisseau _ h = prop_inv_hitbox h
 --   volume englobant du vaisseau.
 mkPartiesVaisseauStandard :: Int -> Int -> Either Text PartiesVaisseau
 mkPartiesVaisseauStandard x y = do
-  corps     <- mkRectangle x (y + 4) 12 14
-  reacteurG <- mkDisque (x + 3) (y + 3) 3
-  reacteurD <- mkDisque (x + 9) (y + 3) 3
-  cockpit   <- mkDisque (x + 6) (y + 14) 2
+  -- TODO: stocker dans des constantes au lieu d'écrire en dur.
+  corps     <- mkRectangle x (y + 8) 24 28
+  reacteurG <- mkDisque (x + 6) (y + 6) 6
+  reacteurD <- mkDisque (x + 18) (y + 6) 6
+  cockpit   <- mkDisque (x + 12) (y + 28) 4
   mkPartiesVaisseau corps reacteurG reacteurD (Just cockpit)
 
 translateHitboxParties :: Int -> Int -> Hitbox -> Hitbox
