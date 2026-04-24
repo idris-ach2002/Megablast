@@ -104,7 +104,7 @@ prop_post_appliquerCommandes as =
 ---------------------------------------------------------------------------------
 
 toursParSeconde :: Float
-toursParSeconde = 30
+toursParSeconde = 120
 
 data AppStateFull = AppStateFull
   { asfBase :: AppState
