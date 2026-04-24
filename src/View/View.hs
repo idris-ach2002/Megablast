@@ -9,6 +9,7 @@ import Graphics.Gloss
 import Model.Engine
 import Model.Objects
 import qualified View.HitboxView as HB
+import View.MurView
 import qualified View.Theme as Theme
 import View.VaisseauView
 
@@ -77,7 +78,9 @@ dessinerMoteur m
   | not (prop_partie_en_cours m) = dessinerGameOver
   | otherwise =
       pictures $
-        [ color Theme.couleurFond $ rectangleSolid fw fh ]
+        [ color Theme.couleurFond $ rectangleSolid fw fh
+        , dessinerMursNiveau (mMurs m)
+        ]
         ++ map dessinerObstacle        (mObstacles m)
         ++ map dessinerProjectile      (mProjectiles m)
         ++ map dessinerEnnemi          (mEnnemis m)

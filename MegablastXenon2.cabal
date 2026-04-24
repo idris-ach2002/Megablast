@@ -34,6 +34,7 @@ library
       Model.VaisseauForme
       View.FormesView
       View.HitboxView
+      View.MurView
       View.Theme
       View.VaisseauView
       View.View

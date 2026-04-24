@@ -21,9 +21,11 @@ prop_inv_hitbox (Point _ _)         = True
 prop_inv_hitbox (Disque _ _ r)      = r > 0
 prop_inv_hitbox (Rectangle _ _ w h) = w > 0 && h > 0
 prop_inv_hitbox (Composee hs)       = length hs >= 2 && all prop_inv_hitbox hs
---TODO: Revoir les invariants sur les murs,
-prop_inv_hitbox (MurGauche l) = length l >= 2
-prop_inv_hitbox (MurDroit l) = length l >= 2
+--TODO: idéalement l'invariant c'est que les coordonnées soit tous > (comment approximer le mieux ?)
+prop_inv_hitbox (MurGauche ((_, y1) : (_, y2) : _)) = y1 < y2
+prop_inv_hitbox (MurGauche _)                       = False
+prop_inv_hitbox (MurDroit  ((_, y1) : (_, y2) : _)) = y1 < y2
+prop_inv_hitbox (MurDroit  _)                       = False
 
 -- Smart constructors
 mkPoint :: Int -> Int -> Hitbox
@@ -160,8 +162,8 @@ collision mur@(MurGauche _) rect@(Rectangle _ _ _ _) = collision rect mur
 collision (Rectangle rx ry w h) (MurDroit l) =
   collisionRectangleMur (>=) min (rx + w - 1) ry h l
 collision mur@(MurDroit _) rect@(Rectangle _ _ _ _) = collision rect mur
-
-collision _ _ = undefined
+--TODO
+collision _ _ = False
 
 -- Q1.4 : si h1 = Composee [p1,p2] et h2 est un Point en collision avec h1,
 -- alors h2 est un des deux points de h1.
