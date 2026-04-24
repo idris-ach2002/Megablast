@@ -71,6 +71,13 @@ mkMursNiveau murG murD
   | not (prop_inv_hitbox murD) = Left "mkMursNiveau: mur droit invalide"
   | otherwise = Right (MursNiveau murG murD)
 
+defileMurs :: MursNiveau -> MursNiveau
+defileMurs murs =
+  MursNiveau
+    { mnMurGauche = translateHitbox 0 (-1) (mnMurGauche murs)
+    , mnMurDroit  = translateHitbox 0 (-1) (mnMurDroit murs)
+    }
+
 ---------------------------------------------------------------------------------
 --- Moteur
 ---------------------------------------------------------------------------------
@@ -290,8 +297,11 @@ finDeTourMoteurEither m
           m0 = foldr (appliquerEvenement . epEvenement) m evtsNow
           m1 = m0 { mScript = evtsFutur }
 
+          (scrollNow, cadScroll') = tickCadence (mCadScroll m1)
+          obs'  = if scrollNow then map defileObstacle (mObstacles m1) else mObstacles m1
+          murs' = if scrollNow then defileMurs (mMurs m1) else mMurs m1
+
           projs' = map finDeTourProjectile (mProjectiles m1)
-          (cadScroll', obs') = finDeTourObstacles (mCadScroll m1) (mObstacles m1)
 
           rng = mRng m1
           (graineEnnemis, rngNext) = random rng :: (Int, StdGen)
@@ -305,6 +315,7 @@ finDeTourMoteurEither m
                 (m1 { mObstacles   = obs'
                     , mProjectiles = projsValides
                     , mEnnemis     = enns'
+                    , mMurs        = murs'
                     , mCadScroll   = cadScroll'
                     })
 
@@ -370,10 +381,10 @@ appliquerCommande i Tirer cadTir m =
 
 exempleMoteur :: Either Text Moteur
 exempleMoteur = do
-  cad <- mkCadence 3
+  cad <- mkCadence 1
   formeVaisseau1 <- mkPartiesVaisseauStandard 50 20
   formeVaisseau2 <- mkPartiesVaisseauStandard 90 20
-  cadV <- mkCadence 1
+  cadV <- mkCadence 10000
   vaisseau <- mkVaisseauJoueuse formeVaisseau1 1 2 cadV
   vaisseau2 <- mkVaisseauJoueuse formeVaisseau2 1 2 cadV
   hObs <- mkRectangle 30 300 40 20
