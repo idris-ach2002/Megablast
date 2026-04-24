@@ -106,21 +106,23 @@ collisionRectangleMur
 collisionRectangleMur cmp chooseX edgeX ry h pts =
   let yMin = ry
       yMax = ry + h - 1
+
       aux [] = False
       aux [_] = False
-      aux (p1 : p2 : rest) =
-        let seg = (p1, p2)
-        in if segmentOverlapsY yMin yMax seg
-             then
-               let yStart = max yMin (snd p1)
-                   yEnd   = min yMax (snd p2)
-                   xStart = xOnSegmentAtY yStart seg
-                   xEnd   = xOnSegmentAtY yEnd seg
-                   wallX  = chooseX xStart xEnd
-               in cmp (fromIntegral edgeX) wallX || aux (p2 : rest)
-             else aux (p2 : rest)
-  in aux pts
+      aux (p1@(_, y1) : p2@(_, y2) : rest)
+        | y2 < yMin = aux (p2 : rest)
+        | y1 > yMax = False
+        | otherwise =
+            let seg    = (p1, p2)
+                yStart = max yMin y1
+                yEnd   = min yMax y2
+                xStart = xOnSegmentAtY yStart seg
+                xEnd   = xOnSegmentAtY yEnd seg
+                wallX  = chooseX xStart xEnd
+            in cmp (fromIntegral edgeX) wallX
 
+  in aux pts
+  
 --TODO: compléter progressivement les autres cas utiles
 collision :: Hitbox -> Hitbox -> Bool
 collision (Point x1 y1) (Point x2 y2) =
