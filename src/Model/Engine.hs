@@ -368,7 +368,7 @@ appliquerCommande i (Deplacer d) _ m =
   case lookupAt i (mJoueuses m) of
     Nothing -> (m, Nothing)
     Just v  ->
-      let v' = deplaceVaisseau d v
+      let v' = essaieDeplacerVaisseau d v
           v'' = foldl joueuseToucheeObstacle v' (mObstacles m)
           v''' = joueuseToucheeMurs (mMurs m) v''
       in (m { mJoueuses = replaceAt i v''' (mJoueuses m) }, Nothing)
@@ -384,7 +384,7 @@ exempleMoteur = do
   cad <- mkCadence 1
   formeVaisseau1 <- mkPartiesVaisseauStandard 50 20
   formeVaisseau2 <- mkPartiesVaisseauStandard 90 20
-  cadV <- mkCadence 10000
+  cadV <- mkCadence 1
   vaisseau <- mkVaisseauJoueuse formeVaisseau1 1 2 cadV
   vaisseau2 <- mkVaisseauJoueuse formeVaisseau2 1 2 cadV
   hObs <- mkRectangle 30 300 40 20

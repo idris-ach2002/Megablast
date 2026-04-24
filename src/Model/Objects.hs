@@ -186,6 +186,27 @@ deplaceVaisseau d v =
   let (dx, dy) = dirVector d
   in v { vjForme = translatePartiesVaisseau dx dy (vjForme v) }
 
+essaieDeplacerVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse
+essaieDeplacerVaisseau d v
+  | not (prop_inv_vaisseau v) = error "essaieDeplacerVaisseau: invariant vaisseau violé"
+  | otherwise =
+      let (moveNow, cad') = tickCadence (vjCadence v)
+          v' = v { vjCadence = cad' }
+      in if moveNow then deplaceVaisseau d v' else v'
+
+prop_pre_essaieDeplacerVaisseau :: Direction -> VaisseauJoueuse -> Bool
+prop_pre_essaieDeplacerVaisseau _ = prop_inv_vaisseau
+
+prop_post_essaieDeplacerVaisseau :: Direction -> VaisseauJoueuse -> VaisseauJoueuse -> Bool
+prop_post_essaieDeplacerVaisseau d v v' =
+  let (moveNow, cad') = tickCadence (vjCadence v)
+      vSansMove = v { vjCadence = cad' }
+      vAvecMove = deplaceVaisseau d vSansMove
+  in     prop_inv_vaisseau v'
+      && vjPv v' == vjPv v
+      && vjEssais v' == vjEssais v
+      && if moveNow then v' == vAvecMove else v' == vSansMove
+
 prop_pre_deplaceVaisseau :: Direction -> VaisseauJoueuse -> Bool
 prop_pre_deplaceVaisseau _ = prop_inv_vaisseau
 

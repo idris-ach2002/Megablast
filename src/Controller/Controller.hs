@@ -1,4 +1,4 @@
-{- HLINT ignore "Use camelCase" -}
+{-# HLINT ignore "Use camelCase" #-}
 
 module Controller.Controller where
 
@@ -73,18 +73,27 @@ prop_post_gererEvenement _ as' = prop_inv_moteur (asMoteur as')
 -- Application des commandes clavier
 ---------------------------------------------------------------------------------
 
+actionsDepuisTouches :: AppState -> [(Int, Action)]
+actionsDepuisTouches as =
+  [ (i, a)
+  | k <- Set.toList (asTouchesPres as)
+  , Just (i, a) <- [toucheVersAction k]
+  , i < length (mJoueuses (asMoteur as))
+  ]
+
+appliquerActions :: [(Int, Action)] -> Cadence -> Moteur -> Moteur
+appliquerActions actions cadTir moteur =
+  foldr
+    (\(i, a) m -> fst (appliquerCommande i a cadTir m))
+    moteur
+    actions
+
 appliquerCommandes :: AppState -> Moteur
 appliquerCommandes as =
-  let touches = Set.toList (asTouchesPres as)
-      actions = [ (i, a)
-                | k <- touches
-                , Just (i, a) <- [toucheVersAction k]
-                , i < length (mJoueuses (asMoteur as))
-                ]
-      cadTir = asCadTirJoueuse as
-  in foldr (\(i, a) m -> fst (appliquerCommande i a cadTir m))
-           (asMoteur as)
-           actions
+  appliquerActions
+    (actionsDepuisTouches as)
+    (asCadTirJoueuse as)
+    (asMoteur as)
 
 prop_post_appliquerCommandes :: AppState -> Bool
 prop_post_appliquerCommandes as =
@@ -105,30 +114,34 @@ data AppStateFull = AppStateFull
 mkAppStateFull :: AppState -> AppStateFull
 mkAppStateFull as = AppStateFull as 0
 
--- | Applique n tours moteur de manière sûre. Si un tour échoue, on s'arrête et
--- on renvoie l'erreur correspondante.
-appliquerNToursEither :: Int -> Moteur -> Either String Moteur
-appliquerNToursEither n m
+-- | Applique n tours moteur de manière sûre en rejouant les actions courantes à
+-- chaque tour. Si un tour échoue, on s'arrête et on renvoie l'erreur.
+appliquerNToursAvecCommandesEither :: Int -> [(Int, Action)] -> Cadence -> Moteur -> Either String Moteur
+appliquerNToursAvecCommandesEither n actions cadTir m
   | n <= 0 = Right m
   | otherwise =
-      case finDeTourMoteurEither m of
-        Left err -> Left (show err)
-        Right m' -> appliquerNToursEither (n - 1) m'
+      let m0 = appliquerActions actions cadTir m
+      in case finDeTourMoteurEither m0 of
+           Left err -> Left (show err)
+           Right m' -> appliquerNToursAvecCommandesEither (n - 1) actions cadTir m'
 
 simulerStep :: Float -> AppStateFull -> AppStateFull
 simulerStep dt asf
   | asPause (asfBase asf) = asf
   | not (prop_partie_en_cours (asMoteur (asfBase asf))) = asf
   | otherwise =
-      let accu' = asfAccu asf + dt
-          nTours = floor (accu' * toursParSeconde) :: Int
-          accu'' = accu' - fromIntegral nTours / toursParSeconde
-          m0 = appliquerCommandes (asfBase asf)
-          m' = case appliquerNToursEither nTours m0 of
+      let accu'   = asfAccu asf + dt
+          nTours  = floor (accu' * toursParSeconde) :: Int
+          accu''  = accu' - fromIntegral nTours / toursParSeconde
+          actions = actionsDepuisTouches (asfBase asf)
+          cadTir  = asCadTirJoueuse (asfBase asf)
+          mInitial = asMoteur (asfBase asf)
+          m' = case appliquerNToursAvecCommandesEither nTours actions cadTir mInitial of
                  Right mOk -> mOk
-                 Left _    -> m0
+                 Left _    -> mInitial
       in asf { asfBase = (asfBase asf) { asMoteur = m' }
-             , asfAccu = accu'' }
+             , asfAccu = accu''
+             }
 
 prop_pre_simulerStep :: AppStateFull -> Bool
 prop_pre_simulerStep = prop_inv_moteur . asMoteur . asfBase
