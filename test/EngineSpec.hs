@@ -1,5 +1,6 @@
 module EngineSpec (spec) where
 
+import Model.Murs
 import Model.Engine
 import Model.Hitbox
 import Model.Objects
@@ -138,6 +139,36 @@ spec = do
 
       v' `shouldNotBe` v
       collision (vjHitbox v') mur `shouldBe` False
+
+  describe "Moteur: optimisation du scrolling" $ do
+    it "mkMursNiveau transforme les murs infinis en murs finis" $ do
+      let murG = mur_gauche_dents_scie 50 60
+          murD = mur_droit_dents_scie largeurZoneJeu 50 60
+          Right murs = mkMursNiveau murG murD
+
+      murNombrePoints (mnMurGauche murs) `shouldSatisfy` (<= nombreMaxPointsMur)
+      murNombrePoints (mnMurDroit murs)  `shouldSatisfy` (<= nombreMaxPointsMur)
+
+    it "defileMurs garde un nombre borné de points après beaucoup de tours" $ do
+      let murG = mur_gauche_dents_scie 50 60
+          murD = mur_droit_dents_scie largeurZoneJeu 50 60
+          Right murs0 = mkMursNiveau murG murD
+          mursFinal = iterate defileMurs murs0 !! 5000
+
+      prop_inv_mursNiveau mursFinal `shouldBe` True
+      prop_post_defileMurs murs0 mursFinal `shouldBe` True
+      murNombrePoints (mnMurGauche mursFinal) `shouldSatisfy` (<= nombreMaxPointsMur)
+      murNombrePoints (mnMurDroit mursFinal)  `shouldSatisfy` (<= nombreMaxPointsMur)
+
+    it "les obstacles sortis de l'écran sont supprimés en fin de tour" $ do
+      let Right cad = mkCadence 1
+          Right hObs = mkRectangle 30 (-200) 40 20
+          Right obs = mkObstacle hObs
+          v = vaisseauTest 10 10 3 2 cad
+          Right m = mkMoteurTest [obs] [] [] [v] cad [] 0 0
+          m' = finDeTourMoteur m
+
+      mObstacles m' `shouldBe` []
 
   describe "Moteur: commandes sûres" $ do
     it "appliquerCommande ignore un indice de joueuse invalide" $ do

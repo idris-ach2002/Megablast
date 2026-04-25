@@ -27,6 +27,14 @@ library
   exposed-modules:
       Controller.Controller
       Model.Engine
+      Model.Engine.Collisions
+      Model.Engine.Commands
+      Model.Engine.Examples
+      Model.Engine.ListUtils
+      Model.Engine.Murs
+      Model.Engine.Properties
+      Model.Engine.Step
+      Model.Engine.Types
       Model.Hitbox
       Model.Lib
       Model.Murs
