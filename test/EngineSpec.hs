@@ -1,12 +1,25 @@
 module EngineSpec (spec) where
 
-import Engine
-import Hitbox
-import Objects
+import Model.Engine
+import Model.Hitbox
+import Model.Objects
+import Model.VaisseauForme
 import SpecHelpers
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
+
+vaisseauTest :: Int -> Int -> Int -> Int -> Cadence -> VaisseauJoueuse
+vaisseauTest x y pv essais cad =
+  let forme =
+        unsafeRight
+          "vaisseauTest: forme invalide"
+          (mkPartiesVaisseauStandard x y)
+  in VaisseauJoueuse forme pv essais cad
+
+pointDansVaisseauTest :: Hitbox
+pointDansVaisseauTest =
+  Point 22 30
 
 spec :: Spec
 spec = do
@@ -16,15 +29,15 @@ spec = do
 
     it "mkMoteur rejette un tour négatif" $ do
       let Right cad = mkCadence 1
-          Right v = mkVaisseauJoueuse (Rectangle 0 0 5 5) 1 1 cad
-      mkMoteur [] [] [] [v] cad [] (-1) 0 `shouldSatisfy` isLeft
+          v = vaisseauTest 10 10 1 1 cad
+      mkMoteurTest [] [] [] [v] cad [] (-1) 0 `shouldSatisfy` isLeft
 
     it "mkMoteur trie le script par tour croissant" $ do
       let Right cad = mkCadence 1
-          Right v = mkVaisseauJoueuse (Rectangle 0 0 5 5) 1 1 cad
+          v = vaisseauTest 10 10 1 1 cad
           e1 = EvenementPlanifie 10 (DisparObstacle 0)
           e2 = EvenementPlanifie 2  (DisparEnnemi 0)
-          Right m = mkMoteur [] [] [] [v] cad [e1, e2] 0 0
+          Right m = mkMoteurTest [] [] [] [v] cad [e1, e2] 0 0
       map epTour (mScript m) `shouldBe` [2, 10]
 
   describe "Moteur: propriétés de fin de tour" $ do
@@ -34,7 +47,7 @@ spec = do
     prop "finDeTourMoteur préserve l'invariant" $
       forAll genMoteur prop_invariant_preserve
 
-    prop "finDeTourMoteur conserve le nombre de joueuses" $
+    prop "finDeTourMoteur n'augmente pas le nombre de joueuses" $
       forAll genMoteur prop_joueuses_stables
 
     prop "finDeTourMoteur consomme les événements passés du script" $
@@ -51,40 +64,69 @@ spec = do
   describe "Moteur: collisions et respawn" $ do
     it "Un projectile ennemi qui touche une joueuse disparaît et enlève 1 PV" $ do
       let Right cad = mkCadence 1
-          v = VaisseauJoueuse (Rectangle 10 10 4 4) 3 2 cad
-          p = Projectile (Point 10 10) Bas cad TirEnnemi
-          Right m = mkMoteur [] [p] [] [v] cad [] 0 0
+          v = vaisseauTest 10 10 3 2 cad
+          p = Projectile pointDansVaisseauTest Bas cad TirEnnemi
+          Right m = mkMoteurTest [] [p] [] [v] cad [] 0 0
           m' = resoudreCollisions m
+
       length (mProjectiles m') `shouldBe` 0
       map vjPv (mJoueuses m') `shouldBe` [2]
 
-    it "Quand le dernier PV tombe à 0, un essai est consommé et la joueuse réapparaît" $ do
+    it "Quand le dernier PV tombe à 0 et qu'il reste des essais, un essai est consommé" $ do
       let Right cad = mkCadence 1
-          v = VaisseauJoueuse (Rectangle 10 10 4 4) 1 2 cad
-          p = Projectile (Point 10 10) Bas cad TirEnnemi
-          Right m = mkMoteur [] [p] [] [v] cad [] 0 0
+          v = vaisseauTest 10 10 1 2 cad
+          p = Projectile pointDansVaisseauTest Bas cad TirEnnemi
+          Right m = mkMoteurTest [] [p] [] [v] cad [] 0 0
           m' = resoudreCollisions m
           [v'] = mJoueuses m'
+
       vjPv v' `shouldBe` pvRespawnMinimal
       vjEssais v' `shouldBe` 1
+      mProjectiles m' `shouldBe` []
+
+    it "Une joueuse avec 0 essai disparaît même s'il lui reste 1 PV" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 1 0 cad
+          Right m = mkMoteurTest [] [] [] [v] cad [] 0 0
+          m' = resoudreCollisions m
+
+      mJoueuses m' `shouldBe` []
+
+    it "Une joueuse qui consomme son dernier essai disparaît du moteur" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 1 1 cad
+          p = Projectile pointDansVaisseauTest Bas cad TirEnnemi
+          Right m = mkMoteurTest [] [p] [] [v] cad [] 0 0
+          m' = resoudreCollisions m
+
+      mJoueuses m' `shouldBe` []
+      mProjectiles m' `shouldBe` []
+
+    it "Une joueuse déjà morte PV=0 et essais=0 disparaît du moteur" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 0 0 cad
+          Right m = mkMoteurTest [] [] [] [v] cad [] 0 0
+          m' = resoudreCollisions m
+
+      mJoueuses m' `shouldBe` []
 
     it "Une collision directe joueuse/ennemi enlève 1 PV à la joueuse" $ do
       let Right cad = mkCadence 1
           Right pv = mkPV 3
-          v = VaisseauJoueuse (Rectangle 10 10 4 4) 3 2 cad
-          e = Ennemi (Rectangle 10 10 4 4) pv (Scripted [Attendre] 0) cad
-          Right m = mkMoteur [] [] [e] [v] cad [] 0 0
+          v = vaisseauTest 10 10 3 2 cad
+          e = Ennemi (Rectangle 10 18 24 28) pv (Scripted [Attendre] 0) cad
+          Right m = mkMoteurTest [] [] [e] [v] cad [] 0 0
           m' = resoudreCollisions m
+
       map vjPv (mJoueuses m') `shouldBe` [2]
 
   describe "Moteur: commandes sûres" $ do
-    -- Ce test documente le nouveau contrat de sécurité : un indice invalide
-    -- n'explose plus avec (!!), la commande est simplement ignorée.
     it "appliquerCommande ignore un indice de joueuse invalide" $ do
       let Right cad = mkCadence 1
-          v = VaisseauJoueuse (Rectangle 0 0 4 4) 2 1 cad
-          Right m = mkMoteur [] [] [] [v] cad [] 0 0
+          v = vaisseauTest 10 10 2 1 cad
+          Right m = mkMoteurTest [] [] [] [v] cad [] 0 0
           (m', mp) = appliquerCommande 7 Tirer cad m
+
       m' `shouldBe` m
       mp `shouldBe` Nothing
 

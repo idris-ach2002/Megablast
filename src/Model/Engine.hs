@@ -111,9 +111,34 @@ prop_inv_moteur m =
     scriptTrie [_]      = True
     scriptTrie (a:b:xs) = epTour a <= epTour b && scriptTrie (b:xs)
 
+-- | Une joueuse est encore jouable seulement s'il lui reste au moins un essai
+--   et au moins un point de vie.
+--
+--   Convention
+--   - essais > 0 : la joueuse peut encore jouer ;
+--   - essais == 0 : la joueuse est éliminée et doit disparaître.
+joueuseEncoreEnJeu :: VaisseauJoueuse -> Bool
+joueuseEncoreEnJeu v =
+  vjPv v > 0 && vjEssais v > 0
+
+supprimerJoueusesEliminees :: [VaisseauJoueuse] -> [VaisseauJoueuse]
+supprimerJoueusesEliminees =
+  filter joueuseEncoreEnJeu
+
+prop_pre_supprimerJoueusesEliminees :: [VaisseauJoueuse] -> Bool
+prop_pre_supprimerJoueusesEliminees =
+  all prop_inv_vaisseau
+
+prop_post_supprimerJoueusesEliminees :: [VaisseauJoueuse] -> [VaisseauJoueuse] -> Bool
+prop_post_supprimerJoueusesEliminees js js' =
+     all prop_inv_vaisseau js'
+  && all joueuseEncoreEnJeu js'
+  && length js' <= length js
+
 prop_partie_en_cours :: Moteur -> Bool
 prop_partie_en_cours m =
-  any (\v -> vjPv v > 0 || vjEssais v > 0) (mJoueuses m)
+  any joueuseEncoreEnJeu (mJoueuses m)
+
 
 mkMoteur
   :: [Obstacle]
@@ -236,43 +261,74 @@ joueuseToucheeMurs murs =
 resoudreCollisions :: Moteur -> Moteur
 resoudreCollisions m =
   let
+    joueusesAuDepart =
+      supprimerJoueusesEliminees (mJoueuses m)
+
     (jous1, projsApresJoueuses) =
-      foldr appliquerProjSurJoueuses (mJoueuses m, []) (mProjectiles m)
+      foldr appliquerProjSurJoueuses (joueusesAuDepart, []) (mProjectiles m)
 
     appliquerProjSurJoueuses p (js, acc) =
       let (js', consomme) = parcourirJoueuses p js
-      in if consomme then (js', acc) else (js', p : acc)
+      in if consomme
+           then (js', acc)
+           else (js', p : acc)
 
-    parcourirJoueuses _ [] = ([], False)
+    parcourirJoueuses _ [] =
+      ([], False)
+
     parcourirJoueuses p (j:js) =
       let (j', hit) = joueuseToucheePar j p
       in if hit
-           then (j' : js, True)
-           else let (js', found) = parcourirJoueuses p js
-                in (j : js', found)
+           then (supprimerJoueusesEliminees (j' : js), True)
+           else
+             let (js', found) = parcourirJoueuses p js
+             in (j : js', found)
 
-    m1 = m { mJoueuses = jous1, mProjectiles = projsApresJoueuses }
+    m1 =
+      m { mJoueuses = jous1
+        , mProjectiles = projsApresJoueuses
+        }
 
     (enns2, projsRestes) =
       foldr appliquerProjSurEnnemis (mEnnemis m1, []) (mProjectiles m1)
 
     appliquerProjSurEnnemis p (es, acc) =
       let (es', consomme) = parcourirEnnemis p es
-      in if consomme then (es', acc) else (es', p : acc)
+      in if consomme
+           then (es', acc)
+           else (es', p : acc)
 
-    parcourirEnnemis _ [] = ([], False)
+    parcourirEnnemis _ [] =
+      ([], False)
+
     parcourirEnnemis p (e:es) =
       let (me', hit) = ennemiToucheePar e p
           es' = maybe es (:es) me'
       in if hit
            then (es', True)
-           else let (es'', found) = parcourirEnnemis p es
-                in (e : es'', found)
+           else
+             let (es'', found) = parcourirEnnemis p es
+             in (e : es'', found)
 
-    m2 = m1 { mEnnemis = enns2, mProjectiles = projsRestes }
-    jous3 = [ foldl joueuseToucheeObstacle j (mObstacles m2) | j <- mJoueuses m2 ]
-    jous4 = [ foldl joueuseToucheeEnnemi   j (mEnnemis m2)   | j <- jous3 ]
-    jous5 = map (joueuseToucheeMurs (mMurs m2)) jous4
+    m2 =
+      m1 { mEnnemis = enns2
+         , mProjectiles = projsRestes
+         }
+
+    jous3 =
+      [ foldl joueuseToucheeObstacle j (mObstacles m2)
+      | j <- mJoueuses m2
+      ]
+
+    jous4 =
+      [ foldl joueuseToucheeEnnemi j (mEnnemis m2)
+      | j <- jous3
+      ]
+
+    jous5 =
+      supprimerJoueusesEliminees $
+        map (joueuseToucheeMurs (mMurs m2)) jous4
+
   in m2 { mJoueuses = jous5 }
 
 prop_pre_finDeTourMoteur :: Moteur -> Bool
@@ -283,7 +339,8 @@ prop_post_finDeTourMoteur :: Moteur -> Moteur -> Bool
 prop_post_finDeTourMoteur m m' =
      prop_inv_moteur m'
   && mTour m' == mTour m + 1
-  && length (mJoueuses m') == length (mJoueuses m)
+  && length (mJoueuses m') <= length (mJoueuses m)
+  && all joueuseEncoreEnJeu (mJoueuses m')
   && all prop_inv_projectile (mProjectiles m')
 
 -- | Version sûre de la fin de tour. Elle rend explicite l'échec par `Either`
@@ -367,17 +424,22 @@ appliquerCommande _ Attendre _ m = (m, Nothing)
 appliquerCommande i (Deplacer d) _ m =
   case lookupAt i (mJoueuses m) of
     Nothing -> (m, Nothing)
-    Just v  ->
-      let v' = essaieDeplacerVaisseau d v
-          v'' = foldl joueuseToucheeObstacle v' (mObstacles m)
-          v''' = joueuseToucheeMurs (mMurs m) v''
-      in (m { mJoueuses = replaceAt i v''' (mJoueuses m) }, Nothing)
+    Just v
+      | not (joueuseEncoreEnJeu v) -> (m, Nothing)
+      | otherwise ->
+          let v'   = essaieDeplacerVaisseau d v
+              v''  = foldl joueuseToucheeObstacle v' (mObstacles m)
+              v''' = joueuseToucheeMurs (mMurs m) v''
+          in (m { mJoueuses = replaceAt i v''' (mJoueuses m) }, Nothing)
+
 appliquerCommande i Tirer cadTir m =
   case lookupAt i (mJoueuses m) of
     Nothing -> (m, Nothing)
-    Just v  ->
-      let p = tirVaisseau v cadTir
-      in (m { mProjectiles = mProjectiles m ++ [p] }, Just p)
+    Just v
+      | not (joueuseEncoreEnJeu v) -> (m, Nothing)
+      | otherwise ->
+          let p = tirVaisseau v cadTir
+          in (m { mProjectiles = mProjectiles m ++ [p] }, Just p)
 
 exempleMoteur :: Either Text Moteur
 exempleMoteur = do
@@ -422,11 +484,16 @@ prop_invariant_preserve m
   | not (prop_partie_en_cours m) = True
   | otherwise = prop_inv_moteur (finDeTourMoteur m)
 
-prop_joueuses_stables :: Moteur -> Bool
-prop_joueuses_stables m
+prop_joueuses_non_croissantes :: Moteur -> Bool
+prop_joueuses_non_croissantes m
   | not (prop_inv_moteur m)      = True
   | not (prop_partie_en_cours m) = True
-  | otherwise = length (mJoueuses (finDeTourMoteur m)) == length (mJoueuses m)
+  | otherwise =
+      length (mJoueuses (finDeTourMoteur m)) <= length (mJoueuses m)
+
+prop_joueuses_stables :: Moteur -> Bool
+prop_joueuses_stables =
+  prop_joueuses_non_croissantes
 
 prop_script_diminue :: Moteur -> Bool
 prop_script_diminue m
@@ -434,8 +501,7 @@ prop_script_diminue m
   | not (prop_partie_en_cours m) = True
   | otherwise =
       let m' = finDeTourMoteur m
-          t' = mTour m'
-      in all (\ep -> epTour ep > t') (mScript m')
+      in all (\ep -> epTour ep > mTour m) (mScript m')
 
 -- | Preuve informelle de prop_tour_incremente :
 --

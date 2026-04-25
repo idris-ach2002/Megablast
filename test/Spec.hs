@@ -2,7 +2,6 @@
 
 module Main where
 
-import Lib
 import SpecHelpers
 import qualified EngineSpec
 import qualified HitboxSpec
@@ -12,8 +11,8 @@ import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
 
-import Hitbox
-import Objects
+import Model.Hitbox
+import Model.Objects
 
 main :: IO ()
 main = hspec $ do

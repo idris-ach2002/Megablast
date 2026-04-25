@@ -4,7 +4,7 @@ import SpecHelpers
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
-import Hitbox
+import Model.Hitbox
 
 --  Mur vertical fini utilisé dans les tests.
 murGaucheVerticalTest :: Hitbox

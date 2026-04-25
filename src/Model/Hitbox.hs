@@ -59,11 +59,11 @@ distanceSquared x1 y1 x2 y2 =
   let dx = x1 - x2
       dy = y1 - y2
   in dx * dx + dy * dy
-
+  
 collisionRectangleDisque :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Bool
 collisionRectangleDisque rx ry w h xc yc r =
-  let closestX = clampInt rx (rx + w - 1) xc
-      closestY = clampInt ry (ry + h - 1) yc
+  let closestX = clampInt rx (rx + w) xc
+      closestY = clampInt ry (ry + h) yc
   in distanceSquared xc yc closestX closestY <= r * r
 
 segmentOverlapsY :: Int -> Int -> ((Int, Int), (Int, Int)) -> Bool
