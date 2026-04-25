@@ -50,3 +50,9 @@ couleurMurDroit = makeColorI 80 200 80 255
 
 couleurFond :: Color
 couleurFond = makeColorI 10 10 25 255
+
+couleurEtoile :: Color
+couleurEtoile = makeColorI 245 245 255 220
+
+couleurEtoileFaible :: Color
+couleurEtoileFaible = makeColorI 190 205 255 140

@@ -40,6 +40,7 @@ library
       Model.Murs
       Model.Objects
       Model.VaisseauForme
+      View.Background
       View.FormesView
       View.HitboxView
       View.MurView

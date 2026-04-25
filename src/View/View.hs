@@ -12,6 +12,7 @@ import qualified View.HitboxView as HB
 import View.MurView
 import qualified View.Theme as Theme
 import View.VaisseauView
+import View.Background
 
 ---------------------------------------------------------------------------------
 -- Façade pour Main
@@ -75,10 +76,14 @@ dessinerGameOver =
 
 dessinerMoteur :: Moteur -> Picture
 dessinerMoteur m
-  | not (prop_partie_en_cours m) = dessinerGameOver
+  | not (prop_partie_en_cours m) =
+      pictures
+        [ dessinerFondEspace (mTour m)
+        , dessinerGameOver
+        ]
   | otherwise =
       pictures $
-        [ color Theme.couleurFond $ rectangleSolid fw fh
+        [ dessinerFondEspace (mTour m)
         , dessinerMursNiveau (mMurs m)
         ]
         ++ map dessinerObstacle        (mObstacles m)
@@ -87,6 +92,3 @@ dessinerMoteur m
         ++ map dessinerVaisseauJoueuse (mJoueuses m)
         ++ zipWith dessinerHUD [0 ..]  (mJoueuses m)
         ++ [dessinerTour (mTour m)]
-  where
-    fw = fromIntegral largeurFenetre
-    fh = fromIntegral hauteurFenetre
