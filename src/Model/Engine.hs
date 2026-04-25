@@ -207,6 +207,29 @@ replaceAt n x (y:ys) = y : replaceAt (n - 1) x ys
 pvRespawnMinimal :: Int
 pvRespawnMinimal = 1
 
+distanceRepousseMur :: Int
+distanceRepousseMur = 10
+
+limiteCorrectionMur :: Int
+limiteCorrectionMur = 80
+
+repousseVaisseauN :: Int -> Direction -> VaisseauJoueuse -> VaisseauJoueuse
+repousseVaisseauN n d v
+  | n <= 0    = v
+  | otherwise = repousseVaisseauN (n - 1) d (repousseVaisseau d v)
+
+repousseHorsMur :: Hitbox -> Direction -> VaisseauJoueuse -> VaisseauJoueuse
+repousseHorsMur mur d =
+  ajouterImpulsion . corriger limiteCorrectionMur
+  where
+    corriger 0 v = v
+    corriger n v
+      | collision (vjHitbox v) mur = corriger (n - 1) (repousseVaisseau d v)
+      | otherwise                  = v
+
+    ajouterImpulsion v =
+      repousseVaisseauN distanceRepousseMur d v
+
 reapparaitreJoueuse :: VaisseauJoueuse -> VaisseauJoueuse
 reapparaitreJoueuse v
   | vjPv v > 0      = v
@@ -245,12 +268,12 @@ joueuseToucheeEnnemi v e
 
 joueuseToucheeMurGauche :: Hitbox -> VaisseauJoueuse -> VaisseauJoueuse
 joueuseToucheeMurGauche mur v
-  | collision (vjHitbox v) mur = repousseVaisseau Gauche v
+  | collision (vjHitbox v) mur = repousseHorsMur mur Gauche v
   | otherwise                  = v
 
 joueuseToucheeMurDroit :: Hitbox -> VaisseauJoueuse -> VaisseauJoueuse
 joueuseToucheeMurDroit mur v
-  | collision (vjHitbox v) mur = repousseVaisseau Droite v
+  | collision (vjHitbox v) mur = repousseHorsMur mur Droite v
   | otherwise                  = v
 
 joueuseToucheeMurs :: MursNiveau -> VaisseauJoueuse -> VaisseauJoueuse

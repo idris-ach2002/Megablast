@@ -120,6 +120,25 @@ spec = do
 
       map vjPv (mJoueuses m') `shouldBe` [2]
 
+  describe "Moteur: collisions avec les murs" $ do
+    it "Un contact avec le mur gauche repousse visiblement la joueuse" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 3 2 cad
+          mur = MurGauche [(20, 0), (20, hauteurZoneJeu)]
+          v' = joueuseToucheeMurGauche mur v
+
+      v' `shouldNotBe` v
+      collision (vjHitbox v') mur `shouldBe` False
+
+    it "Un contact avec le mur droit repousse visiblement la joueuse" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 760 10 3 2 cad
+          mur = MurDroit [(780, 0), (780, hauteurZoneJeu)]
+          v' = joueuseToucheeMurDroit mur v
+
+      v' `shouldNotBe` v
+      collision (vjHitbox v') mur `shouldBe` False
+
   describe "Moteur: commandes sûres" $ do
     it "appliquerCommande ignore un indice de joueuse invalide" $ do
       let Right cad = mkCadence 1
