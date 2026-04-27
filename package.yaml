@@ -27,6 +27,8 @@ dependencies:
 - hspec
 - random
 - gloss
+- JuicyPixels
+- vector
 
 ghc-options:
 - -Wall

@@ -3,6 +3,7 @@ module View.View
   , hauteurFenetre
   , couleurFond
   , dessinerMoteur
+  , dessinerMoteurAvecAssets
   ) where
 
 import Graphics.Gloss
@@ -14,6 +15,7 @@ import qualified View.Theme as Theme
 import View.VaisseauView
 import View.Background
 import View.MeteoreView
+import View.Assets
 
 ---------------------------------------------------------------------------------
 -- Façade pour Main
@@ -31,21 +33,20 @@ couleurFond = Theme.couleurFond
 ---------------------------------------------------------------------------------
 
 dessinerObstacle :: Obstacle -> Picture
-dessinerObstacle (Obstacle h) = HB.dessinerHitbox Theme.couleurObstacle h
+dessinerObstacle (Obstacle h) =
+  HB.dessinerHitbox Theme.couleurObstacle h
 
 dessinerProjectile :: Projectile -> Picture
 dessinerProjectile p =
-  let c = case prOwner p of
-            TirJoueuse -> Theme.couleurProjJoueuse
-            TirEnnemi  -> Theme.couleurProjEnnemi
+  let c =
+        case prOwner p of
+          TirJoueuse -> Theme.couleurProjJoueuse
+          TirEnnemi  -> Theme.couleurProjEnnemi
   in HB.dessinerHitbox c (prHitbox p)
 
 dessinerEnnemi :: Ennemi -> Picture
-dessinerEnnemi e = HB.dessinerHitbox Theme.couleurEnnemi (eHitbox e)
-
----------------------------------------------------------------------------------
--- HUD
----------------------------------------------------------------------------------
+dessinerEnnemi e =
+  HB.dessinerHitbox Theme.couleurEnnemi (eHitbox e)
 
 dessinerHUD :: Int -> VaisseauJoueuse -> Picture
 dessinerHUD idx v =
@@ -54,43 +55,74 @@ dessinerHUD idx v =
       pvTxt  = "PV: " ++ show (vjPv v)
       essTxt = "  Essais: " ++ show (vjEssais v)
       txt    = "J" ++ show (idx + 1) ++ "  " ++ pvTxt ++ essTxt
-  in color white $ translate xBase yBase $ scale 0.13 0.13 $ text txt
+  in color white $
+       translate xBase yBase $
+         scale 0.13 0.13 $
+           text txt
 
 dessinerTour :: Int -> Picture
 dessinerTour t =
   let x = fromIntegral (largeurFenetre `div` 2) - 120
       y = fromIntegral (- hauteurFenetre `div` 2) + 8
-  in color (greyN 0.6) $ translate x y $ scale 0.10 0.10 $ text ("Tour: " ++ show t)
+  in color (greyN 0.6) $
+       translate x y $
+         scale 0.10 0.10 $
+           text ("Tour: " ++ show t)
 
 dessinerGameOver :: Picture
 dessinerGameOver =
   pictures
-    [ color (makeColorI 0 0 0 180) $ rectangleSolid (fromIntegral largeurFenetre)
-                                                     (fromIntegral hauteurFenetre)
-    , color red   $ translate (-140) 20    $ scale 0.4 0.4 $ text "GAME OVER"
-    , color white $ translate (-110) (-30) $ scale 0.15 0.15 $ text "Appuyez sur R pour recommencer"
+    [ color (makeColorI 0 0 0 180) $
+        rectangleSolid
+          (fromIntegral largeurFenetre)
+          (fromIntegral hauteurFenetre)
+
+    , color red $
+        translate (-140) 20 $
+          scale 0.4 0.4 $
+            text "GAME OVER"
+
+    , color white $
+        translate (-110) (-30) $
+          scale 0.15 0.15 $
+            text "Appuyez sur R pour recommencer"
     ]
 
 ---------------------------------------------------------------------------------
 -- Rendu principal du moteur
 ---------------------------------------------------------------------------------
 
+-- | Rendu historique sans assets chargés.
+--   Il reste utile pour garder une API simple et un fallback.
 dessinerMoteur :: Moteur -> Picture
-dessinerMoteur m
+dessinerMoteur =
+  dessinerMoteurAvecAssets assetsVides
+
+assetsVides :: AssetsView
+assetsVides =
+  AssetsView
+    { assetMurGauche = Nothing
+    , assetMurDroit  = Nothing
+    }
+
+-- | Rendu principal avec assets graphiques.
+dessinerMoteurAvecAssets :: AssetsView -> Moteur -> Picture
+dessinerMoteurAvecAssets assets m
   | not (prop_partie_en_cours m) =
       pictures
         [ dessinerFondEspace (mTour m)
         , dessinerGameOver
         ]
+
   | otherwise =
       pictures $
         [ dessinerFondEspace (mTour m)
-        , dessinerMursNiveau (mMurs m)
+        , dessinerMursNiveauAvecAssets assets (mTour m) (mMurs m)
         ]
-        ++ map dessinerMeteore        (mMeteores m)
-        ++ map dessinerObstacle       (mObstacles m)
-        ++ map dessinerProjectile     (mProjectiles m)
-        ++ map dessinerEnnemi         (mEnnemis m)
+        ++ map dessinerMeteore         (mMeteores m)
+        ++ map dessinerObstacle        (mObstacles m)
+        ++ map dessinerProjectile      (mProjectiles m)
+        ++ map dessinerEnnemi          (mEnnemis m)
         ++ map dessinerVaisseauJoueuse (mJoueuses m)
-        ++ zipWith dessinerHUD [0 ..] (mJoueuses m)
+        ++ zipWith dessinerHUD [0 ..]  (mJoueuses m)
         ++ [dessinerTour (mTour m)]

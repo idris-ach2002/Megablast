@@ -6,6 +6,7 @@ import Model.Engine
 import Model.Objects
 import View.View
 import Controller.Controller
+import View.Assets
 
 ---------------------------------------------------------------------------------
 -- Fenêtre Gloss
@@ -32,12 +33,13 @@ main = do
       case mkCadence 3 of
         Left err  -> putStrLn $ "Erreur cadence tir: " ++ show err
         Right cadTir -> do
+          assets <- chargerAssetsView
           let appState = mkAppStateFull (mkAppState m cadTir)
           play
             fenetre
-            couleurFond           -- couleur de fond (écrasée par dessinerMoteur)
+            couleurFond
             fps
             appState
-            (dessinerMoteur . asMoteur . asfBase)   -- View
-            gererEvenementFull                       -- Controller (events)
-            simulerStep                              -- Controller (step)
+            (dessinerMoteurAvecAssets assets . asMoteur . asfBase)
+            gererEvenementFull
+            simulerStep

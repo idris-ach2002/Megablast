@@ -71,3 +71,40 @@ couleurMeteoreTrou = makeColorI 55 45 40 230
 
 couleurMeteoreTrainee :: Color
 couleurMeteoreTrainee = makeColorI 255 120 35 90
+
+couleurMurOmbre :: Color
+couleurMurOmbre =
+  makeColorI 6 8 15 255
+
+couleurMurBord :: Color
+couleurMurBord =
+  makeColorI 85 115 145 255
+
+couleurBarreFond :: Color
+couleurBarreFond =
+  makeColorI 18 28 44 255
+
+couleurBarreMetal :: Color
+couleurBarreMetal =
+  makeColorI 70 96 122 255
+
+couleurPastilleBord :: Color
+couleurPastilleBord =
+  makeColorI 58 105 125 255
+
+couleurPastilleCentre :: Color
+couleurPastilleCentre =
+  makeColorI 95 145 165 255
+
+couleurPastilleLumiere :: Color
+couleurPastilleLumiere =
+  makeColorI 150 185 200 255
+
+couleurMurFondSimple :: Color
+couleurMurFondSimple =
+  makeColorI 30 38 58 255
+
+couleurMurFond :: Int -> Color
+couleurMurFond y
+  | (y `div` 90) `mod` 2 == 0 = makeColorI 34 42 62 255
+  | otherwise                 = makeColorI 25 31 48 255
