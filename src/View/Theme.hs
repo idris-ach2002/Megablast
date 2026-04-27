@@ -56,3 +56,18 @@ couleurEtoile = makeColorI 245 245 255 220
 
 couleurEtoileFaible :: Color
 couleurEtoileFaible = makeColorI 190 205 255 140
+
+couleurMeteore :: Color
+couleurMeteore = makeColorI 145 105 75 255
+
+couleurMeteoreBord :: Color
+couleurMeteoreBord = makeColorI 85 65 55 255
+
+couleurMeteoreClair :: Color
+couleurMeteoreClair = makeColorI 210 165 110 230
+
+couleurMeteoreTrou :: Color
+couleurMeteoreTrou = makeColorI 55 45 40 230
+
+couleurMeteoreTrainee :: Color
+couleurMeteoreTrainee = makeColorI 255 120 35 90

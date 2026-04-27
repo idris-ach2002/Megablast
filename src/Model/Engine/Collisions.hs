@@ -4,6 +4,7 @@ module Model.Engine.Collisions where
 
 import Model.Engine.Types
 import Model.Hitbox
+import Model.Meteore
 import Model.Objects
 
 -- | Une joueuse est encore jouable seulement s'il lui reste au moins un essai
@@ -71,11 +72,23 @@ reapparaitreJoueuse v
 encaisserDegatJoueuse :: VaisseauJoueuse -> VaisseauJoueuse
 encaisserDegatJoueuse = reapparaitreJoueuse . subirDegat
 
+encaisserDegatsJoueuse :: Int -> VaisseauJoueuse -> VaisseauJoueuse
+encaisserDegatsJoueuse n v
+  | n <= 0    = v
+  | otherwise = encaisserDegatsJoueuse (n - 1) (encaisserDegatJoueuse v)
+
 joueuseToucheePar :: VaisseauJoueuse -> Projectile -> (VaisseauJoueuse, Bool)
 joueuseToucheePar v p
   | prOwner p == TirEnnemi
     && collision (vjHitbox v) (prHitbox p) = (encaisserDegatJoueuse v, True)
   | otherwise                              = (v, False)
+
+joueuseToucheeMeteore :: VaisseauJoueuse -> Meteore -> (VaisseauJoueuse, Bool)
+joueuseToucheeMeteore v mt
+  | collision (vjHitbox v) (mtHitbox mt) =
+      (encaisserDegatsJoueuse (mtDegats mt) v, True)
+  | otherwise =
+      (v, False)
 
 ennemiToucheePar :: Ennemi -> Projectile -> (Maybe Ennemi, Bool)
 ennemiToucheePar e p
@@ -168,18 +181,43 @@ resoudreCollisions m =
          , mProjectiles = projsRestes
          }
 
+    (meteoresRestants, jousApresMeteores) =
+      foldr appliquerMeteoreSurJoueuses ([], mJoueuses m2) (mMeteores m2)
+
+    appliquerMeteoreSurJoueuses mt (acc, js) =
+      let (js', touche) = parcourirJoueusesMeteore mt js
+      in if touche
+           then (acc, js')
+           else (mt : acc, js')
+
+    parcourirJoueusesMeteore _ [] =
+      ([], False)
+
+    parcourirJoueusesMeteore mt (j:js) =
+      let (j', hit) = joueuseToucheeMeteore j mt
+      in if hit
+           then (supprimerJoueusesEliminees (j' : js), True)
+           else
+             let (js', found) = parcourirJoueusesMeteore mt js
+             in (j : js', found)
+
+    m3 =
+      m2 { mMeteores = meteoresRestants
+         , mJoueuses = jousApresMeteores
+         }
+
     jous3 =
-      [ foldl joueuseToucheeObstacle j (mObstacles m2)
-      | j <- mJoueuses m2
+      [ foldl joueuseToucheeObstacle j (mObstacles m3)
+      | j <- mJoueuses m3
       ]
 
     jous4 =
-      [ foldl joueuseToucheeEnnemi j (mEnnemis m2)
+      [ foldl joueuseToucheeEnnemi j (mEnnemis m3)
       | j <- jous3
       ]
 
     jous5 =
       supprimerJoueusesEliminees $
-        map (joueuseToucheeMurs (mMurs m2)) jous4
+        map (joueuseToucheeMurs (mMurs m3)) jous4
 
-  in m2 { mJoueuses = jous5 }
+  in m3 { mJoueuses = jous5 }

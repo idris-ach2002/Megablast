@@ -37,12 +37,14 @@ library
       Model.Engine.Types
       Model.Hitbox
       Model.Lib
+      Model.Meteore
       Model.Murs
       Model.Objects
       Model.VaisseauForme
       View.Background
       View.FormesView
       View.HitboxView
+      View.MeteoreView
       View.MurView
       View.Theme
       View.VaisseauView

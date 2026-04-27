@@ -9,6 +9,7 @@ import Model.Engine.ListUtils
 import Model.Engine.Murs
 import Model.Engine.Types
 import Model.Hitbox
+import Model.Meteore
 import Model.Objects
 import System.Random (StdGen, random)
 
@@ -17,8 +18,10 @@ appliquerEvenement :: Evenement -> Moteur -> Moteur
 appliquerEvenement (AppEnnemi e)      m = m { mEnnemis     = mEnnemis m ++ [e] }
 appliquerEvenement (AppObstacle o)    m = m { mObstacles   = mObstacles m ++ [o] }
 appliquerEvenement (AppProjectile p)  m = m { mProjectiles = mProjectiles m ++ [p] }
+appliquerEvenement (AppMeteore mt)    m = m { mMeteores    = mMeteores m ++ [mt] }
 appliquerEvenement (DisparEnnemi i)   m = m { mEnnemis     = removeAt i (mEnnemis m) }
 appliquerEvenement (DisparObstacle i) m = m { mObstacles   = removeAt i (mObstacles m) }
+appliquerEvenement (DisparMeteore i)  m = m { mMeteores    = removeAt i (mMeteores m) }
 
 prop_pre_finDeTourMoteur :: Moteur -> Bool
 prop_pre_finDeTourMoteur m =
@@ -58,6 +61,12 @@ finDeTourMoteurEither m
               then defileMurs (mMurs m1)
               else mMurs m1
 
+          meteoresTour =
+            map finDeTourMeteore (mMeteores m1)
+
+          meteoresValides =
+            filter (not . horsEcranMoteur . mtHitbox) meteoresTour
+
           projs' =
             map finDeTourProjectile (mProjectiles m1)
 
@@ -84,6 +93,7 @@ finDeTourMoteurEither m
               (m1 { mObstacles   = obsValides
                   , mProjectiles = projsValides
                   , mEnnemis     = ennsValides
+                  , mMeteores    = meteoresValides
                   , mMurs        = murs'
                   , mCadScroll   = cadScroll'
                   })

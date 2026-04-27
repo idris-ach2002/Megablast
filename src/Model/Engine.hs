@@ -7,6 +7,7 @@
 --   simplement Model.Engine comme avant.
 module Model.Engine
   ( module Model.Engine.Types
+  , module Model.Meteore
   , module Model.Engine.Murs
   , module Model.Engine.Collisions
   , module Model.Engine.Step
@@ -20,6 +21,7 @@ import Model.Engine.Collisions
 import Model.Engine.Commands
 import Model.Engine.Examples
 import Model.Engine.ListUtils
+import Model.Meteore
 import Model.Engine.Murs
 import Model.Engine.Properties
 import Model.Engine.Step

@@ -13,6 +13,7 @@ import View.MurView
 import qualified View.Theme as Theme
 import View.VaisseauView
 import View.Background
+import View.MeteoreView
 
 ---------------------------------------------------------------------------------
 -- Façade pour Main
@@ -86,9 +87,10 @@ dessinerMoteur m
         [ dessinerFondEspace (mTour m)
         , dessinerMursNiveau (mMurs m)
         ]
-        ++ map dessinerObstacle        (mObstacles m)
-        ++ map dessinerProjectile      (mProjectiles m)
-        ++ map dessinerEnnemi          (mEnnemis m)
+        ++ map dessinerMeteore        (mMeteores m)
+        ++ map dessinerObstacle       (mObstacles m)
+        ++ map dessinerProjectile     (mProjectiles m)
+        ++ map dessinerEnnemi         (mEnnemis m)
         ++ map dessinerVaisseauJoueuse (mJoueuses m)
-        ++ zipWith dessinerHUD [0 ..]  (mJoueuses m)
+        ++ zipWith dessinerHUD [0 ..] (mJoueuses m)
         ++ [dessinerTour (mTour m)]

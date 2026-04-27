@@ -7,6 +7,7 @@ import Data.List (sortBy)
 import Data.Ord (comparing)
 import Data.Text (Text)
 import Model.Hitbox
+import Model.Meteore
 import Model.Objects
 import System.Random (StdGen, mkStdGen)
 
@@ -16,8 +17,10 @@ data Evenement =
     AppEnnemi Ennemi
   | AppObstacle Obstacle
   | AppProjectile Projectile
+  | AppMeteore Meteore
   | DisparEnnemi Int
   | DisparObstacle Int
+  | DisparMeteore Int
   deriving (Eq, Show)
 
 -- | Un événement du script avec son tour de déclenchement.
@@ -68,6 +71,7 @@ data Moteur = Moteur
   { mObstacles   :: [Obstacle]
   , mProjectiles :: [Projectile]
   , mEnnemis     :: [Ennemi]
+  , mMeteores    :: [Meteore]
   , mJoueuses    :: [VaisseauJoueuse]
   , mMurs        :: MursNiveau
   , mCadScroll   :: Cadence
@@ -81,6 +85,7 @@ prop_inv_moteur m =
      all prop_inv_obstacle           (mObstacles m)
   && all prop_inv_projectile         (mProjectiles m)
   && all prop_inv_ennemi             (mEnnemis m)
+  && all prop_inv_meteore            (mMeteores m)
   && all prop_inv_vaisseau           (mJoueuses m)
   && prop_inv_mursNiveau             (mMurs m)
   && prop_inv_cadence                (mCadScroll m)
@@ -117,6 +122,7 @@ mkMoteur obs projs enns jous murs cad evts tour seed
       { mObstacles   = obs
       , mProjectiles = projs
       , mEnnemis     = enns
+      , mMeteores    = []
       , mJoueuses    = jous
       , mMurs        = murs
       , mCadScroll   = cad
