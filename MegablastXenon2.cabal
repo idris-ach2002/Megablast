@@ -43,6 +43,7 @@ library
       Model.VaisseauForme
       View.Assets
       View.Background
+      View.EnnemiView
       View.FormesView
       View.HitboxView
       View.MeteoreView

@@ -40,7 +40,8 @@ couleurProjJoueuse :: Color
 couleurProjJoueuse = makeColorI 255 255 50 255
 
 couleurProjEnnemi :: Color
-couleurProjEnnemi = makeColorI 255 100 0 255
+couleurProjEnnemi =
+  makeColorI 230 70 95 255
 
 couleurMurGauche :: Color
 couleurMurGauche = makeColorI 80 200 80 255
@@ -108,3 +109,32 @@ couleurMurFond :: Int -> Color
 couleurMurFond y
   | (y `div` 90) `mod` 2 == 0 = makeColorI 34 42 62 255
   | otherwise                 = makeColorI 25 31 48 255
+
+couleurEnnemiCorps :: Color
+couleurEnnemiCorps =
+  makeColorI 150 42 58 255
+
+couleurEnnemiAile :: Color
+couleurEnnemiAile =
+  makeColorI 95 32 48 255
+
+couleurEnnemiBord :: Color
+couleurEnnemiBord =
+  makeColorI 235 125 135 255
+
+couleurEnnemiBande :: Color
+couleurEnnemiBande =
+  makeColorI 55 18 32 255
+
+couleurEnnemiCockpit :: Color
+couleurEnnemiCockpit =
+  makeColorI 235 165 145 230
+
+couleurEnnemiReacteur :: Color
+couleurEnnemiReacteur =
+  makeColorI 80 85 105 255
+
+couleurEnnemiFlamme :: Color
+couleurEnnemiFlamme =
+  makeColorI 210 85 45 210
+

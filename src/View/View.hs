@@ -16,6 +16,7 @@ import View.VaisseauView
 import View.Background
 import View.MeteoreView
 import View.Assets
+import View.EnnemiView
 
 ---------------------------------------------------------------------------------
 -- Façade pour Main
@@ -44,9 +45,6 @@ dessinerProjectile p =
           TirEnnemi  -> Theme.couleurProjEnnemi
   in HB.dessinerHitbox c (prHitbox p)
 
-dessinerEnnemi :: Ennemi -> Picture
-dessinerEnnemi e =
-  HB.dessinerHitbox Theme.couleurEnnemi (eHitbox e)
 
 dessinerHUD :: Int -> VaisseauJoueuse -> Picture
 dessinerHUD idx v =
