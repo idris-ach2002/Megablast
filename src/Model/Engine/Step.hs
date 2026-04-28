@@ -5,6 +5,7 @@ module Model.Engine.Step where
 import Data.List (partition)
 import Data.Text (Text)
 import Model.Engine.Collisions
+import Model.Engine.EnnemiSpawn
 import Model.Engine.ListUtils
 import Model.Engine.Murs
 import Model.Engine.Types
@@ -41,40 +42,55 @@ finDeTourMoteurEither :: Moteur -> Either Text Moteur
 finDeTourMoteurEither m
   | not (prop_inv_moteur m) = Left "finDeTourMoteur: invariant moteur violé"
   | otherwise =
-      let tourActuel = mTour m
-          (evtsNow, evtsFutur) = partition (\ep -> epTour ep <= tourActuel) (mScript m)
-          m0 = foldr (appliquerEvenement . epEvenement) m evtsNow
-          m1 = m0 { mScript = evtsFutur }
+      let tourActuel =
+            mTour m
 
-          (scrollNow, cadScroll') = tickCadence (mCadScroll m1)
+          (evtsNow, evtsFutur) =
+            partition (\ep -> epTour ep <= tourActuel) (mScript m)
+
+          m0 =
+            foldr (appliquerEvenement . epEvenement) m evtsNow
+
+          m1 =
+            m0 { mScript = evtsFutur }
+
+          -- Nouvelle étape : apparition automatique des ennemis.
+          mSpawn =
+            genererEnnemiSiBesoin m1
+
+          (scrollNow, cadScroll') =
+            tickCadence (mCadScroll mSpawn)
 
           obsDefiles =
             if scrollNow
-              then map defileObstacle (mObstacles m1)
-              else mObstacles m1
+              then map defileObstacle (mObstacles mSpawn)
+              else mObstacles mSpawn
 
           obsValides =
             filter (not . horsEcranMoteur . obsHitbox) obsDefiles
 
           murs' =
             if scrollNow
-              then defileMurs (mMurs m1)
-              else mMurs m1
+              then defileMurs (mMurs mSpawn)
+              else mMurs mSpawn
 
           meteoresTour =
-            map finDeTourMeteore (mMeteores m1)
+            map finDeTourMeteore (mMeteores mSpawn)
 
           meteoresValides =
             filter (not . horsEcranMoteur . mtHitbox) meteoresTour
 
           projs' =
-            map finDeTourProjectile (mProjectiles m1)
+            map finDeTourProjectile (mProjectiles mSpawn)
 
-          rng = mRng m1
-          (graineEnnemis, rngNext) = random rng :: (Int, StdGen)
+          rng =
+            mRng mSpawn
+
+          (graineEnnemis, rngNext) =
+            random rng :: (Int, StdGen)
 
           (ennsTour, newProjs) =
-            unzip $ map (finDeTourEnnemi graineEnnemis) (mEnnemis m1)
+            unzip $ map (finDeTourEnnemi graineEnnemis) (mEnnemis mSpawn)
 
           ennsValides =
             filter (not . horsEcranMoteur . eHitbox) ennsTour
@@ -90,20 +106,21 @@ finDeTourMoteurEither m
 
           m2 =
             resoudreCollisions
-              (m1 { mObstacles   = obsValides
-                  , mProjectiles = projsValides
-                  , mEnnemis     = ennsValides
-                  , mMeteores    = meteoresValides
-                  , mMurs        = murs'
-                  , mCadScroll   = cadScroll'
-                  })
+              (mSpawn { mObstacles   = obsValides
+                      , mProjectiles = projsValides
+                      , mEnnemis     = ennsValides
+                      , mMeteores    = meteoresValides
+                      , mMurs        = murs'
+                      , mCadScroll   = cadScroll'
+                      })
 
-          m3 = m2 { mTour = tourActuel + 1, mRng = rngNext }
+          m3 =
+            m2 { mTour = tourActuel + 1
+               , mRng  = rngNext
+               }
+
       in Right m3
 
--- | Version historique conservée pour le reste du code. En cas d'entrée
---   invalide, on renvoie l'état inchangé : la version `Either` ci-dessus est à
---   privilégier quand on veut rendre le contrat explicite.
 finDeTourMoteur :: Moteur -> Moteur
 finDeTourMoteur m =
   case finDeTourMoteurEither m of
@@ -111,19 +128,24 @@ finDeTourMoteur m =
     Left _   -> m
 
 -- | Détermine si une hitbox est hors de l'écran logique du moteur.
---   Les murs ne sont pas supprimés, car ils définissent les bords du niveau.
 horsEcranHitbox :: Int -> Int -> Int -> Hitbox -> Bool
 horsEcranHitbox largeur hauteur marge (Point x y) =
   x < (-marge) || x > largeur + marge || y < (-marge) || y > hauteur + marge
+
 horsEcranHitbox largeur hauteur marge (Disque xc yc r) =
   xc + r < (-marge) || xc - r > largeur + marge
   || yc + r < (-marge) || yc - r > hauteur + marge
+
 horsEcranHitbox largeur hauteur marge (Model.Hitbox.Rectangle x y w h) =
   x + w < (-marge) || x > largeur + marge
   || y + h < (-marge) || y > hauteur + marge
+
 horsEcranHitbox largeur hauteur marge (Composee hs) =
   all (horsEcranHitbox largeur hauteur marge) hs
-horsEcranHitbox _ _ _ _ = False
+
+horsEcranHitbox _ _ _ _ =
+  False
 
 horsEcranMoteur :: Hitbox -> Bool
-horsEcranMoteur = horsEcranHitbox largeurZoneJeu hauteurZoneJeu margeHorsEcran
+horsEcranMoteur =
+  horsEcranHitbox largeurZoneJeu hauteurZoneJeu margeHorsEcran

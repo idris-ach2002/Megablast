@@ -187,3 +187,35 @@ spec = do
             let cad = mCadScroll m
                 res = appliquerCommande i (Deplacer dir) cad m
             in prop_post_appliquerCommande i (Deplacer dir) cad m res
+
+  describe "Moteur: apparition automatique des ennemis" $ do
+    it "n'ajoute pas d'ennemi hors période d'apparition" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 3 2 cad
+          Right m = mkMoteurTest [] [] [] [v] cad [] 1 0
+          m' = genererEnnemiSiBesoin m
+
+      length (mEnnemis m') `shouldBe` 0
+      prop_inv_moteur m' `shouldBe` True
+
+    it "ajoute un ennemi pendant une période d'apparition" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 3 2 cad
+          Right m0 = mkMoteurTest [] [] [] [v] cad [] periodeApparitionEnnemi 0
+          m' = genererEnnemiSiBesoin m0
+
+      length (mEnnemis m') `shouldBe` 1
+      prop_inv_moteur m' `shouldBe` True
+
+    it "ne dépasse pas le nombre maximal d'ennemis actifs" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 3 2 cad
+          Right pv = mkPV 2
+          Right h = mkRectangle 200 700 30 34
+          Right ennemi = mkEnnemi h pv (Scripted [Attendre] 0) cad
+          ennemis = replicate maxEnnemisActifs ennemi
+          Right m0 = mkMoteurTest [] [] ennemis [v] cad [] periodeApparitionEnnemi 0
+          m' = genererEnnemiSiBesoin m0
+
+      length (mEnnemis m') `shouldBe` maxEnnemisActifs
+      prop_inv_moteur m' `shouldBe` True
