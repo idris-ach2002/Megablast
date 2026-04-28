@@ -18,6 +18,7 @@ module Model.Engine
   , module Model.Engine.Examples
   , module Model.Engine.Properties
   , module Model.Engine.ListUtils
+  , module Model.Engine.EnnemiAI
   ) where
 
 import Model.Engine.Collisions
@@ -30,3 +31,4 @@ import Model.Engine.Murs
 import Model.Engine.Properties
 import Model.Engine.Step
 import Model.Engine.Types
+import Model.Engine.EnnemiAI

@@ -219,3 +219,46 @@ spec = do
 
       length (mEnnemis m') `shouldBe` maxEnnemisActifs
       prop_inv_moteur m' `shouldBe` True
+  describe "Moteur: comportement intelligent des ennemis" $ do
+    it "un ennemi à droite de la joueuse se déplace vers la gauche" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 100 100 3 2 cad
+          Right pv = mkPV 2
+          Right h = mkRectangle 300 700 30 34
+          Right e = mkEnnemi h pv (Scripted [Attendre] 0) cad
+
+          (e', _) =
+            finDeTourEnnemiIntelligent 1 [v] e
+
+      eHitbox e' `shouldBe` Rectangle 299 700 30 34
+
+    it "un ennemi à gauche de la joueuse se déplace vers la droite" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 300 100 3 2 cad
+          Right pv = mkPV 2
+          Right h = mkRectangle 100 700 30 34
+          Right e = mkEnnemi h pv (Scripted [Attendre] 0) cad
+
+          (e', _) =
+            finDeTourEnnemiIntelligent 1 [v] e
+
+      eHitbox e' `shouldBe` Rectangle 101 700 30 34
+
+    it "un ennemi produit un projectile ennemi quand sa cadence le permet" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 100 100 3 2 cad
+          Right pv = mkPV 2
+          Right h = mkRectangle 100 700 30 34
+          Right e = mkEnnemi h pv (Scripted [Attendre] 0) cad
+
+          (_, mp) =
+            finDeTourEnnemiIntelligent 1 [v] e
+
+      fmap prOwner mp `shouldBe` Just TirEnnemi
+      fmap prDir mp `shouldBe` Just Bas
+
+    prop "finDeTourEnnemiIntelligent préserve les invariants" $
+      forAll genEnnemiSimple $ \e ->
+        forAll genVaisseauActif $ \v ->
+          let res = finDeTourEnnemiIntelligent 1 [v] e
+          in prop_post_finDeTourEnnemiIntelligent 1 [v] e res

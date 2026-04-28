@@ -6,6 +6,7 @@ import Data.List (partition)
 import Data.Text (Text)
 import Model.Engine.Collisions
 import Model.Engine.EnnemiSpawn
+import Model.Engine.EnnemiAI
 import Model.Engine.ListUtils
 import Model.Engine.Murs
 import Model.Engine.Types
@@ -90,8 +91,11 @@ finDeTourMoteurEither m
             random rng :: (Int, StdGen)
 
           (ennsTour, newProjs) =
-            unzip $ map (finDeTourEnnemi graineEnnemis) (mEnnemis mSpawn)
-
+             unzip $
+                map
+                  (finDeTourEnnemiIntelligent graineEnnemis (mJoueuses mSpawn))
+                  (mEnnemis mSpawn)
+                  
           ennsValides =
             filter (not . horsEcranMoteur . eHitbox) ennsTour
 
