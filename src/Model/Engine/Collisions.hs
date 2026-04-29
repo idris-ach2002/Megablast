@@ -212,12 +212,7 @@ resoudreCollisions m =
       ]
 
     jous4 =
-      [ foldl joueuseToucheeEnnemi j (mEnnemis m3)
-      | j <- jous3
-      ]
-
-    jous5 =
       supprimerJoueusesEliminees $
-        map (joueuseToucheeMurs (mMurs m3)) jous4
+        map (joueuseToucheeMurs (mMurs m3)) jous3
 
-  in m3 { mJoueuses = jous5 }
+  in m3 { mJoueuses = jous4 }

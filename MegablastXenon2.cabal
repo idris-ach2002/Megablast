@@ -30,6 +30,7 @@ library
       Model.Engine.Collisions
       Model.Engine.Commands
       Model.Engine.EnnemiAI
+      Model.Engine.EnnemiCollisions
       Model.Engine.EnnemiSpawn
       Model.Engine.Examples
       Model.Engine.ListUtils

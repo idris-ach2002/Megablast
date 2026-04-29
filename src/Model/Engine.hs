@@ -19,6 +19,7 @@ module Model.Engine
   , module Model.Engine.Properties
   , module Model.Engine.ListUtils
   , module Model.Engine.EnnemiAI
+  , module Model.Engine.EnnemiCollisions
   ) where
 
 import Model.Engine.Collisions
@@ -32,3 +33,4 @@ import Model.Engine.Properties
 import Model.Engine.Step
 import Model.Engine.Types
 import Model.Engine.EnnemiAI
+import Model.Engine.EnnemiCollisions

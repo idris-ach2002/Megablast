@@ -111,13 +111,13 @@ spec = do
 
       mJoueuses m' `shouldBe` []
 
-    it "Une collision directe joueuse/ennemi enlève 1 PV à la joueuse" $ do
+    it "Une collision directe joueuse/ennemi est gérée par les collisions spéciales" $ do
       let Right cad = mkCadence 1
           Right pv = mkPV 3
           v = vaisseauTest 10 10 3 2 cad
           e = Ennemi (Rectangle 10 18 24 28) pv (Scripted [Attendre] 0) cad
           Right m = mkMoteurTest [] [] [e] [v] cad [] 0 0
-          m' = resoudreCollisions m
+          m' = resoudreCollisionsEnnemis m
 
       map vjPv (mJoueuses m') `shouldBe` [2]
 
@@ -262,3 +262,53 @@ spec = do
         forAll genVaisseauActif $ \v ->
           let res = finDeTourEnnemiIntelligent 1 [v] e
           in prop_post_finDeTourEnnemiIntelligent 1 [v] e res
+  describe "Moteur: collisions spéciales des ennemis" $ do
+    it "une collision ennemi/joueuse enlève 1 PV et pousse la joueuse vers le bas" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 100 100 3 2 cad
+
+          Right pv = mkPV 2
+          Right hEnnemi = mkRectangle 110 115 30 34
+          Right ennemi = mkEnnemi hEnnemi pv (Scripted [Attendre] 0) cad
+
+          Right m = mkMoteurTest [] [] [ennemi] [v] cad [] 0 0
+          m' = resoudreCollisionsEnnemis m
+
+          [v'] = mJoueuses m'
+
+      vjPv v' `shouldBe` 2
+      snd (centreHitbox (vjHitbox v')) `shouldSatisfy` (< snd (centreHitbox (vjHitbox v)))
+
+    it "un ennemi qui touche un obstacle est repoussé vers le haut" $ do
+      let Right cad = mkCadence 1
+
+          Right pv = mkPV 2
+          Right hEnnemi = mkRectangle 200 300 30 34
+          Right ennemi = mkEnnemi hEnnemi pv (Scripted [Attendre] 0) cad
+
+          Right hObstacle = mkRectangle 195 295 50 50
+          Right obstacle = mkObstacle hObstacle
+
+          v = vaisseauTest 100 100 3 2 cad
+          Right m = mkMoteurTest [obstacle] [] [ennemi] [v] cad [] 0 0
+          m' = resoudreCollisionsEnnemis m
+
+          [ennemi'] = mEnnemis m'
+
+      snd (centreHitbox (eHitbox ennemi')) `shouldSatisfy` (> snd (centreHitbox (eHitbox ennemi)))
+
+    it "un ennemi qui touche un météore disparaît" $ do
+      let Right cad = mkCadence 1
+
+          Right pv = mkPV 2
+          Right hEnnemi = mkRectangle 300 400 30 34
+          Right ennemi = mkEnnemi hEnnemi pv (Scripted [Attendre] 0) cad
+
+          Right meteore = mkMeteoreRond 315 417 20 cad
+
+          v = vaisseauTest 100 100 3 2 cad
+          Right m = mkMoteurTest [] [] [ennemi] [v] cad [] 0 0
+
+          m' = resoudreCollisionsEnnemis (m { mMeteores = [meteore] })
+
+      mEnnemis m' `shouldBe` []

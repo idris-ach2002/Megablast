@@ -7,6 +7,7 @@ import Data.Text (Text)
 import Model.Engine.Collisions
 import Model.Engine.EnnemiSpawn
 import Model.Engine.EnnemiAI
+import Model.Engine.EnnemiCollisions
 import Model.Engine.ListUtils
 import Model.Engine.Murs
 import Model.Engine.Types
@@ -95,7 +96,7 @@ finDeTourMoteurEither m
                 map
                   (finDeTourEnnemiIntelligent graineEnnemis (mJoueuses mSpawn))
                   (mEnnemis mSpawn)
-                  
+
           ennsValides =
             filter (not . horsEcranMoteur . eHitbox) ennsTour
 
@@ -109,14 +110,15 @@ finDeTourMoteurEither m
             filter (not . horsEcranMoteur . prHitbox) tousProjs
 
           m2 =
-            resoudreCollisions
-              (mSpawn { mObstacles   = obsValides
-                      , mProjectiles = projsValides
-                      , mEnnemis     = ennsValides
-                      , mMeteores    = meteoresValides
-                      , mMurs        = murs'
-                      , mCadScroll   = cadScroll'
-                      })
+            resoudreCollisionsEnnemis $
+              resoudreCollisions
+                (mSpawn { mObstacles   = obsValides
+                        , mProjectiles = projsValides
+                        , mEnnemis     = ennsValides
+                        , mMeteores    = meteoresValides
+                        , mMurs        = murs'
+                        , mCadScroll   = cadScroll'
+                        })
 
           m3 =
             m2 { mTour = tourActuel + 1
