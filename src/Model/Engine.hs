@@ -20,6 +20,7 @@ module Model.Engine
   , module Model.Engine.ListUtils
   , module Model.Engine.EnnemiAI
   , module Model.Engine.EnnemiCollisions
+  , module Model.Score
   ) where
 
 import Model.Engine.Collisions
@@ -34,3 +35,4 @@ import Model.Engine.Step
 import Model.Engine.Types
 import Model.Engine.EnnemiAI
 import Model.Engine.EnnemiCollisions
+import Model.Score

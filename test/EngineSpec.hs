@@ -4,6 +4,7 @@ import Model.Murs
 import Model.Engine
 import Model.Hitbox
 import Model.Objects
+import Model.Score
 import Model.VaisseauForme
 import SpecHelpers
 import Test.Hspec
@@ -22,6 +23,18 @@ pointDansVaisseauTest :: Hitbox
 pointDansVaisseauTest =
   Point 22 30
 
+attendUneJoueuse :: [VaisseauJoueuse] -> (VaisseauJoueuse -> Expectation) -> Expectation
+attendUneJoueuse joueuses verifier =
+  case joueuses of
+    [v] -> verifier v
+    _   -> expectationFailure ("Une seule joueuse attendue, obtenu: " ++ show joueuses)
+
+attendUnEnnemi :: [Ennemi] -> (Ennemi -> Expectation) -> Expectation
+attendUnEnnemi ennemis verifier =
+  case ennemis of
+    [e] -> verifier e
+    _   -> expectationFailure ("Un seul ennemi attendu, obtenu: " ++ show ennemis)
+
 spec :: Spec
 spec = do
   describe "Moteur: invariants et constructeur" $ do
@@ -31,6 +44,7 @@ spec = do
     it "mkMoteur rejette un tour négatif" $ do
       let Right cad = mkCadence 1
           v = vaisseauTest 10 10 1 1 cad
+
       mkMoteurTest [] [] [] [v] cad [] (-1) 0 `shouldSatisfy` isLeft
 
     it "mkMoteur trie le script par tour croissant" $ do
@@ -39,6 +53,7 @@ spec = do
           e1 = EvenementPlanifie 10 (DisparObstacle 0)
           e2 = EvenementPlanifie 2  (DisparEnnemi 0)
           Right m = mkMoteurTest [] [] [] [v] cad [e1, e2] 0 0
+
       map epTour (mScript m) `shouldBe` [2, 10]
 
   describe "Moteur: propriétés de fin de tour" $ do
@@ -79,10 +94,11 @@ spec = do
           p = Projectile pointDansVaisseauTest Bas cad TirEnnemi
           Right m = mkMoteurTest [] [p] [] [v] cad [] 0 0
           m' = resoudreCollisions m
-          [v'] = mJoueuses m'
 
-      vjPv v' `shouldBe` pvRespawnMinimal
-      vjEssais v' `shouldBe` 1
+      attendUneJoueuse (mJoueuses m') $ \v' -> do
+        vjPv v' `shouldBe` pvRespawnMinimal
+        vjEssais v' `shouldBe` 1
+
       mProjectiles m' `shouldBe` []
 
     it "Une joueuse avec 0 essai disparaît même s'il lui reste 1 PV" $ do
@@ -120,6 +136,33 @@ spec = do
           m' = resoudreCollisionsEnnemis m
 
       map vjPv (mJoueuses m') `shouldBe` [2]
+
+  describe "Moteur: score" $ do
+    it "le score initial du moteur est nul" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 3 2 cad
+          Right m = mkMoteurTest [] [] [] [v] cad [] 0 0
+
+      scoreValeur (mScore m) `shouldBe` 0
+
+    it "détruire un ennemi avec un tir joueur augmente le score" $ do
+      let Right cad = mkCadence 1
+          v = vaisseauTest 10 10 3 2 cad
+
+          Right pv = mkPV 1
+          Right hEnnemi = mkRectangle 200 300 30 34
+          Right ennemi = mkEnnemi hEnnemi pv (Scripted [Attendre] 0) cad
+
+          p = Projectile (Point 210 310) Haut cad TirJoueuse
+
+          Right m = mkMoteurTest [] [p] [ennemi] [v] cad [] 0 0
+          m' = resoudreCollisions m
+
+      mEnnemis m' `shouldBe` []
+      scoreValeur (mScore m') `shouldBe` scoreEnnemiDetruit 0
+
+    it "le score gagné augmente avec le nombre de tours survécus" $ do
+      scoreEnnemiDetruit 3000 `shouldSatisfy` (> scoreEnnemiDetruit 0)
 
   describe "Moteur: collisions avec les murs" $ do
     it "Un contact avec le mur gauche repousse visiblement la joueuse" $ do
@@ -219,6 +262,7 @@ spec = do
 
       length (mEnnemis m') `shouldBe` maxEnnemisActifs
       prop_inv_moteur m' `shouldBe` True
+
   describe "Moteur: comportement intelligent des ennemis" $ do
     it "un ennemi à droite de la joueuse se déplace vers la gauche" $ do
       let Right cad = mkCadence 1
@@ -262,6 +306,7 @@ spec = do
         forAll genVaisseauActif $ \v ->
           let res = finDeTourEnnemiIntelligent 1 [v] e
           in prop_post_finDeTourEnnemiIntelligent 1 [v] e res
+
   describe "Moteur: collisions spéciales des ennemis" $ do
     it "une collision ennemi/joueuse enlève 1 PV et pousse la joueuse vers le bas" $ do
       let Right cad = mkCadence 1
@@ -274,10 +319,10 @@ spec = do
           Right m = mkMoteurTest [] [] [ennemi] [v] cad [] 0 0
           m' = resoudreCollisionsEnnemis m
 
-          [v'] = mJoueuses m'
-
-      vjPv v' `shouldBe` 2
-      snd (centreHitbox (vjHitbox v')) `shouldSatisfy` (< snd (centreHitbox (vjHitbox v)))
+      attendUneJoueuse (mJoueuses m') $ \v' -> do
+        vjPv v' `shouldBe` 2
+        snd (centreHitbox (vjHitbox v')) `shouldSatisfy`
+          (< snd (centreHitbox (vjHitbox v)))
 
     it "un ennemi qui touche un obstacle est repoussé vers le haut" $ do
       let Right cad = mkCadence 1
@@ -293,9 +338,9 @@ spec = do
           Right m = mkMoteurTest [obstacle] [] [ennemi] [v] cad [] 0 0
           m' = resoudreCollisionsEnnemis m
 
-          [ennemi'] = mEnnemis m'
-
-      snd (centreHitbox (eHitbox ennemi')) `shouldSatisfy` (> snd (centreHitbox (eHitbox ennemi)))
+      attendUnEnnemi (mEnnemis m') $ \ennemi' ->
+        snd (centreHitbox (eHitbox ennemi')) `shouldSatisfy`
+          (> snd (centreHitbox (eHitbox ennemi)))
 
     it "un ennemi qui touche un météore disparaît" $ do
       let Right cad = mkCadence 1

@@ -10,6 +10,7 @@ import Model.Hitbox
 import Model.Meteore
 import Model.Objects
 import System.Random (StdGen, mkStdGen)
+import Model.Score
 
 -- | Un événement planifié associe un numéro de tour à une action sur la scène.
 --   Le script du moteur est une liste d'événements triée par tour croissant.
@@ -78,6 +79,7 @@ data Moteur = Moteur
   , mScript      :: [EvenementPlanifie]
   , mTour        :: Int
   , mRng         :: StdGen
+  , mScore       :: Score
   } deriving (Eq, Show)
 
 prop_inv_moteur :: Moteur -> Bool
@@ -89,6 +91,7 @@ prop_inv_moteur m =
   && all prop_inv_vaisseau           (mJoueuses m)
   && prop_inv_mursNiveau             (mMurs m)
   && prop_inv_cadence                (mCadScroll m)
+  && prop_inv_score                  (mScore m)
   && mTour m >= 0
   && scriptTrie (mScript m)
   && all prop_inv_evenement_planifie (mScript m)
@@ -129,4 +132,5 @@ mkMoteur obs projs enns jous murs cad evts tour seed
       , mScript      = sortBy (comparing epTour) evts
       , mTour        = tour
       , mRng         = mkStdGen seed
+      , mScore       = scoreNul
       }

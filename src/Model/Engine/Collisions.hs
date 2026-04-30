@@ -6,6 +6,7 @@ import Model.Engine.Types
 import Model.Hitbox
 import Model.Meteore
 import Model.Objects
+import Model.Score
 
 -- | Une joueuse est encore jouable seulement s'il lui reste au moins un essai
 --   et au moins un point de vie.
@@ -91,13 +92,21 @@ joueuseToucheeMeteore v mt
       (v, False)
 
 ennemiToucheePar :: Ennemi -> Projectile -> (Maybe Ennemi, Bool)
-ennemiToucheePar e p
+ennemiToucheePar e p =
+  let (me, touche, _) = ennemiToucheeParAvecMort e p
+  in (me, touche)
+
+ennemiToucheeParAvecMort :: Ennemi -> Projectile -> (Maybe Ennemi, Bool, Bool)
+ennemiToucheeParAvecMort e p
   | prOwner p == TirJoueuse
     && collision (eHitbox e) (prHitbox p) =
         let (PV pv) = ePV e
             pv' = pv - 1
-        in (if pv' > 0 then Just (e { ePV = PV pv' }) else Nothing, True)
-  | otherwise = (Just e, False)
+            mort = pv' <= 0
+        in (if mort then Nothing else Just (e { ePV = PV pv' }), True, mort)
+
+  | otherwise =
+      (Just e, False, False)
 
 joueuseToucheeObstacle :: VaisseauJoueuse -> Obstacle -> VaisseauJoueuse
 joueuseToucheeObstacle v o
@@ -155,32 +164,36 @@ resoudreCollisions m =
         , mProjectiles = projsApresJoueuses
         }
 
-    (enns2, projsRestes) =
-      foldr appliquerProjSurEnnemis (mEnnemis m1, []) (mProjectiles m1)
+    (enns2, projsRestes, scoreGagne) =
+      foldr appliquerProjSurEnnemis (mEnnemis m1, [], 0) (mProjectiles m1)
 
-    appliquerProjSurEnnemis p (es, acc) =
-      let (es', consomme) = parcourirEnnemis p es
+    appliquerProjSurEnnemis p (es, acc, scoreAcc) =
+      let (es', consomme, ennemiDetruit) = parcourirEnnemis p es
+          scoreAcc' =
+            if ennemiDetruit
+              then scoreAcc + scoreEnnemiDetruit (mTour m1)
+              else scoreAcc
       in if consomme
-           then (es', acc)
-           else (es', p : acc)
+           then (es', acc, scoreAcc')
+           else (es', p : acc, scoreAcc')
 
     parcourirEnnemis _ [] =
-      ([], False)
+      ([], False, False)
 
     parcourirEnnemis p (e:es) =
-      let (me', hit) = ennemiToucheePar e p
+      let (me', hit, mort) = ennemiToucheeParAvecMort e p
           es' = maybe es (:es) me'
       in if hit
-           then (es', True)
+           then (es', True, mort)
            else
-             let (es'', found) = parcourirEnnemis p es
-             in (e : es'', found)
+             let (es'', found, mortTrouvee) = parcourirEnnemis p es
+             in (e : es'', found, mortTrouvee)
 
     m2 =
       m1 { mEnnemis = enns2
          , mProjectiles = projsRestes
+         , mScore = ajouterPoints scoreGagne (mScore m1)
          }
-
     (meteoresRestants, jousApresMeteores) =
       foldr appliquerMeteoreSurJoueuses ([], mJoueuses m2) (mMeteores m2)
 

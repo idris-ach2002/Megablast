@@ -43,6 +43,7 @@ library
       Model.Meteore
       Model.Murs
       Model.Objects
+      Model.Score
       Model.VaisseauForme
       View.Assets
       View.Background

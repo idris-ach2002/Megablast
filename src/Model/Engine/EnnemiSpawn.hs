@@ -32,7 +32,7 @@ pvEnnemiSpawn :: Int
 pvEnnemiSpawn = 2
 
 cadenceTirEnnemiSpawn :: Int
-cadenceTirEnnemiSpawn = 18
+cadenceTirEnnemiSpawn = 200
 
 -- | Ajoute éventuellement un ennemi au moteur.
 --   La décision est simple :
