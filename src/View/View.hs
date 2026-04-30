@@ -17,6 +17,7 @@ import View.Background
 import View.MeteoreView
 import View.Assets
 import View.EnnemiView
+import Model.Score
 
 ---------------------------------------------------------------------------------
 -- Façade pour Main
@@ -56,6 +57,16 @@ dessinerHUD idx v =
   in color white $
        translate xBase yBase $
          scale 0.13 0.13 $
+           text txt
+
+dessinerScore :: Score -> Picture
+dessinerScore score =
+  let x = fromIntegral (- largeurFenetre `div` 2) + 10
+      y = fromIntegral (- hauteurFenetre `div` 2) + 8
+      txt = "Score: " ++ show (scoreValeur score)
+  in color (greyN 0.85) $
+       translate x y $
+         scale 0.12 0.12 $
            text txt
 
 dessinerTour :: Int -> Picture
@@ -109,6 +120,8 @@ dessinerMoteurAvecAssets assets m
   | not (prop_partie_en_cours m) =
       pictures
         [ dessinerFondEspace (mTour m)
+        , dessinerScore (mScore m)
+        , dessinerTour (mTour m)
         , dessinerGameOver
         ]
 
@@ -123,4 +136,6 @@ dessinerMoteurAvecAssets assets m
         ++ map dessinerEnnemi          (mEnnemis m)
         ++ map dessinerVaisseauJoueuse (mJoueuses m)
         ++ zipWith dessinerHUD [0 ..]  (mJoueuses m)
-        ++ [dessinerTour (mTour m)]
+        ++ [ dessinerScore (mScore m)
+           , dessinerTour (mTour m)
+           ]
