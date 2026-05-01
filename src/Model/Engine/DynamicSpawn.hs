@@ -21,6 +21,12 @@ maxMeteoresDynamiques = 4
 maxObstaclesDynamiques :: Int
 maxObstaclesDynamiques = 7
 
+cadenceTirEnnemiMin :: Int
+cadenceTirEnnemiMin = 120
+
+cadenceTirEnnemiMax :: Int
+cadenceTirEnnemiMax = 220
+
 -- | Point d'entrée unique de génération.
 --   Le moteur ne conserve que les objets actifs.
 --   Si une catégorie est sous son quota et que la période tombe juste,
@@ -84,7 +90,8 @@ genererEnnemiSiBesoinDyn m
   | otherwise =
       let (x, m1)       = tirerInt (120, largeurZoneJeu - 150) m
           (pv, m2)      = tirerInt (1, 3) m1
-          (cadTir, m3)  = tirerInt (14, 28) m2
+          (cadTir, m3)  =
+            tirerInt (cadenceTirEnnemiMin, cadenceTirEnnemiMax) m2
           ennemiM       = creerEnnemiDynamique x pv cadTir
       in case ennemiM of
            Nothing ->

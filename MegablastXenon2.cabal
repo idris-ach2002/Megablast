@@ -55,6 +55,7 @@ library
       View.HUDView
       View.MeteoreView
       View.MurView
+      View.ObstacleView
       View.Theme
       View.VaisseauView
       View.View

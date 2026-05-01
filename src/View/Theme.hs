@@ -58,21 +58,6 @@ couleurEtoile = makeColorI 245 245 255 220
 couleurEtoileFaible :: Color
 couleurEtoileFaible = makeColorI 190 205 255 140
 
-couleurMeteore :: Color
-couleurMeteore = makeColorI 145 105 75 255
-
-couleurMeteoreBord :: Color
-couleurMeteoreBord = makeColorI 85 65 55 255
-
-couleurMeteoreClair :: Color
-couleurMeteoreClair = makeColorI 210 165 110 230
-
-couleurMeteoreTrou :: Color
-couleurMeteoreTrou = makeColorI 55 45 40 230
-
-couleurMeteoreTrainee :: Color
-couleurMeteoreTrainee = makeColorI 255 120 35 90
-
 couleurMurOmbre :: Color
 couleurMurOmbre =
   makeColorI 6 8 15 255
@@ -161,3 +146,59 @@ couleurVieFaible =
 couleurVieReflet :: Color
 couleurVieReflet =
   makeColorI 230 240 255 70
+
+couleurMeteore :: Color
+couleurMeteore =
+  makeColorI 112 86 68 255
+
+couleurMeteoreBord :: Color
+couleurMeteoreBord =
+  makeColorI 48 39 35 255
+
+couleurMeteoreClair :: Color
+couleurMeteoreClair =
+  makeColorI 160 126 92 230
+
+couleurMeteoreOmbre :: Color
+couleurMeteoreOmbre =
+  makeColorI 72 54 46 220
+
+couleurMeteoreTrou :: Color
+couleurMeteoreTrou =
+  makeColorI 34 29 27 235
+
+couleurMeteorePoussiere :: Color
+couleurMeteorePoussiere =
+  makeColorI 160 130 105 95
+
+couleurMeteoreTrainee :: Color
+couleurMeteoreTrainee =
+  makeColorI 160 110 75 80
+
+couleurObstacleCorps :: Color
+couleurObstacleCorps =
+  makeColorI 54 64 82 255
+
+couleurObstacleOmbre :: Color
+couleurObstacleOmbre =
+  makeColorI 18 22 32 255
+
+couleurObstacleBord :: Color
+couleurObstacleBord =
+  makeColorI 105 125 150 255
+
+couleurObstaclePlaque :: Color
+couleurObstaclePlaque =
+  makeColorI 42 50 68 255
+
+couleurObstacleLigne :: Color
+couleurObstacleLigne =
+  makeColorI 82 98 125 255
+
+couleurObstacleRivetBord :: Color
+couleurObstacleRivetBord =
+  makeColorI 18 22 30 255
+
+couleurObstacleRivet :: Color
+couleurObstacleRivet =
+  makeColorI 130 145 165 255

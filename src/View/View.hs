@@ -18,6 +18,7 @@ import View.MeteoreView
 import View.Assets
 import View.EnnemiView
 import View.HUDView
+import qualified View.ObstacleView as ObstacleView
 
 ---------------------------------------------------------------------------------
 -- Façade pour Main
@@ -34,9 +35,6 @@ couleurFond = Theme.couleurFond
 -- Rendu des autres entités
 ---------------------------------------------------------------------------------
 
-dessinerObstacle :: Obstacle -> Picture
-dessinerObstacle (Obstacle h) =
-  HB.dessinerHitbox Theme.couleurObstacle h
 
 dessinerProjectile :: Projectile -> Picture
 dessinerProjectile p =
@@ -99,8 +97,7 @@ dessinerMoteurAvecAssets assets m
         , dessinerMursNiveauAvecAssets assets (mTour m) (mMurs m)
         ]
         ++ map dessinerMeteore         (mMeteores m)
-        ++ map dessinerObstacle        (mObstacles m)
-        ++ map dessinerProjectile      (mProjectiles m)
+        ++ map ObstacleView.dessinerObstacle (mObstacles m)        ++ map dessinerProjectile      (mProjectiles m)
         ++ map dessinerEnnemi          (mEnnemis m)
         ++ map dessinerVaisseauJoueuse (mJoueuses m)
         ++ zipWith (dessinerHUDJoueuse (mTour m)) [0 ..] (mJoueuses m)
