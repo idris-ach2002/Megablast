@@ -36,16 +36,25 @@ genererObjetsDynamiques =
 ---------------------------------------------------------------------------------
 
 periodeEnnemi :: Int -> Int
-periodeEnnemi tour =
-  max 120 (260 - tour `div` 40)
+periodeEnnemi tour
+  | tour < 1500 = 260
+  | tour < 3500 = 210
+  | tour < 6000 = 170
+  | otherwise   = 130
 
 periodeMeteore :: Int -> Int
-periodeMeteore tour =
-  max 90 (220 - tour `div` 45)
+periodeMeteore tour
+  | tour < 1500 = 240
+  | tour < 3500 = 190
+  | tour < 6000 = 150
+  | otherwise   = 110
 
 periodeObstacle :: Int -> Int
-periodeObstacle tour =
-  max 140 (340 - tour `div` 55)
+periodeObstacle tour
+  | tour < 1500 = 360
+  | tour < 3500 = 300
+  | tour < 6000 = 240
+  | otherwise   = 180
 
 doitGenerer :: Int -> Int -> Bool
 doitGenerer tour periode =

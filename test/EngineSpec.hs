@@ -412,3 +412,8 @@ spec = do
             + length (mObstacles mFinal)
 
       nbObjets `shouldSatisfy` (> 0)
+      
+    it "la fréquence d'apparition augmente avec la survie" $ do
+      periodeEnnemi 5000 `shouldSatisfy` (< periodeEnnemi 0)
+      periodeMeteore 5000 `shouldSatisfy` (< periodeMeteore 0)
+      periodeObstacle 5000 `shouldSatisfy` (< periodeObstacle 0)
