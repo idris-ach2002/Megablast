@@ -50,6 +50,7 @@ library
       View.EnnemiView
       View.FormesView
       View.HitboxView
+      View.HUDView
       View.MeteoreView
       View.MurView
       View.Theme

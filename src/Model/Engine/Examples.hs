@@ -17,8 +17,8 @@ exempleMoteur = do
   formeVaisseau1 <- mkPartiesVaisseauStandard 50 20
   formeVaisseau2 <- mkPartiesVaisseauStandard 90 20
   cadV <- mkCadence 1
-  vaisseau <- mkVaisseauJoueuse formeVaisseau1 1 2 cadV
-  vaisseau2 <- mkVaisseauJoueuse formeVaisseau2 1 2 cadV
+  vaisseau <- mkVaisseauJoueuse formeVaisseau1 100 2 cadV
+  vaisseau2 <- mkVaisseauJoueuse formeVaisseau2 100 2 cadV
   hObs <- mkRectangle 30 300 40 20
   obs <- mkObstacle hObs
   let oracle = Scripted [Attendre, Deplacer Gauche, Tirer] 0

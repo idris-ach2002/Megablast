@@ -138,3 +138,26 @@ couleurEnnemiFlamme :: Color
 couleurEnnemiFlamme =
   makeColorI 210 85 45 210
 
+couleurVieFond :: Color
+couleurVieFond =
+  makeColorI 18 22 35 220
+
+couleurVieContour :: Color
+couleurVieContour =
+  makeColorI 105 125 155 255
+
+couleurVieHaute :: Color
+couleurVieHaute =
+  makeColorI 70 170 125 235
+
+couleurVieMoyenne :: Color
+couleurVieMoyenne =
+  makeColorI 195 145 70 235
+
+couleurVieFaible :: Color
+couleurVieFaible =
+  makeColorI 185 65 80 235
+
+couleurVieReflet :: Color
+couleurVieReflet =
+  makeColorI 230 240 255 70

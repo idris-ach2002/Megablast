@@ -17,7 +17,7 @@ import View.Background
 import View.MeteoreView
 import View.Assets
 import View.EnnemiView
-import Model.Score
+import View.HUDView
 
 ---------------------------------------------------------------------------------
 -- Façade pour Main
@@ -45,38 +45,6 @@ dessinerProjectile p =
           TirJoueuse -> Theme.couleurProjJoueuse
           TirEnnemi  -> Theme.couleurProjEnnemi
   in HB.dessinerHitbox c (prHitbox p)
-
-
-dessinerHUD :: Int -> VaisseauJoueuse -> Picture
-dessinerHUD idx v =
-  let xBase  = fromIntegral (- largeurFenetre `div` 2) + 10
-      yBase  = fromIntegral (hauteurFenetre `div` 2) - 20 - fromIntegral (idx * 25)
-      pvTxt  = "PV: " ++ show (vjPv v)
-      essTxt = "  Essais: " ++ show (vjEssais v)
-      txt    = "J" ++ show (idx + 1) ++ "  " ++ pvTxt ++ essTxt
-  in color white $
-       translate xBase yBase $
-         scale 0.13 0.13 $
-           text txt
-
-dessinerScore :: Score -> Picture
-dessinerScore score =
-  let x = fromIntegral (- largeurFenetre `div` 2) + 10
-      y = fromIntegral (- hauteurFenetre `div` 2) + 8
-      txt = "Score: " ++ show (scoreValeur score)
-  in color (greyN 0.85) $
-       translate x y $
-         scale 0.12 0.12 $
-           text txt
-
-dessinerTour :: Int -> Picture
-dessinerTour t =
-  let x = fromIntegral (largeurFenetre `div` 2) - 120
-      y = fromIntegral (- hauteurFenetre `div` 2) + 8
-  in color (greyN 0.6) $
-       translate x y $
-         scale 0.10 0.10 $
-           text ("Tour: " ++ show t)
 
 dessinerGameOver :: Picture
 dessinerGameOver =
@@ -135,7 +103,7 @@ dessinerMoteurAvecAssets assets m
         ++ map dessinerProjectile      (mProjectiles m)
         ++ map dessinerEnnemi          (mEnnemis m)
         ++ map dessinerVaisseauJoueuse (mJoueuses m)
-        ++ zipWith dessinerHUD [0 ..]  (mJoueuses m)
+        ++ zipWith (dessinerHUDJoueuse (mTour m)) [0 ..] (mJoueuses m)
         ++ [ dessinerScore (mScore m)
-           , dessinerTour (mTour m)
-           ]
+          , dessinerTour (mTour m)
+          ]
