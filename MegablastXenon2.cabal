@@ -33,6 +33,7 @@ library
       Model.Engine.EnnemiCollisions
       Model.Engine.EnnemiSpawn
       Model.Engine.Examples
+      Model.Engine.GameConfig
       Model.Engine.ListUtils
       Model.Engine.Murs
       Model.Engine.Properties

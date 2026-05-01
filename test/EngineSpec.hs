@@ -357,3 +357,28 @@ spec = do
           m' = resoudreCollisionsEnnemis (m { mMeteores = [meteore] })
 
       mEnnemis m' `shouldBe` []
+  
+  describe "Moteur: configuration de partie" $ do
+    it "la configuration par défaut crée une partie monojoueur" $ do
+      let Right m = mkMoteurPartie configPartieDefaut
+
+      length (mJoueuses m) `shouldBe` 1
+      mObstacles m `shouldBe` []
+      mProjectiles m `shouldBe` []
+      mEnnemis m `shouldBe` []
+      mMeteores m `shouldBe` []
+      mScript m `shouldBe` []
+      prop_inv_moteur m `shouldBe` True
+
+    it "la configuration duo crée deux joueuses" $ do
+      let Right m = mkMoteurPartie configPartieDuo
+
+      length (mJoueuses m) `shouldBe` 2
+      prop_inv_moteur m `shouldBe` True
+
+    it "exempleMoteur reste compatible avec la configuration par défaut" $ do
+      let Right m1 = exempleMoteur
+          Right m2 = mkMoteurPartie configPartieDefaut
+
+      length (mJoueuses m1) `shouldBe` length (mJoueuses m2)
+      prop_inv_moteur m1 `shouldBe` True

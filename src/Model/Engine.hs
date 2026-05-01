@@ -21,6 +21,7 @@ module Model.Engine
   , module Model.Engine.EnnemiAI
   , module Model.Engine.EnnemiCollisions
   , module Model.Score
+  , module Model.Engine.GameConfig
   ) where
 
 import Model.Engine.Collisions
@@ -36,3 +37,4 @@ import Model.Engine.Types
 import Model.Engine.EnnemiAI
 import Model.Engine.EnnemiCollisions
 import Model.Score
+import Model.Engine.GameConfig

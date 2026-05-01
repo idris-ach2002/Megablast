@@ -1,7 +1,6 @@
 module Main where
 
 import Graphics.Gloss
-import Graphics.Gloss.Interface.Pure.Game
 import Model.Engine
 import Model.Objects
 import View.View
@@ -25,8 +24,7 @@ fps = 60
 
 main :: IO ()
 main = do
-  -- Construction du moteur initial (on unwrap le Either ici, en IO)
-  let moteurE = exempleMoteur
+  let moteurE = mkMoteurPartie configPartieDefaut
   case moteurE of
     Left err -> putStrLn $ "Erreur initialisation moteur: " ++ show err
     Right m  ->
