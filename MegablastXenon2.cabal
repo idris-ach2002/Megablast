@@ -29,6 +29,7 @@ library
       Model.Engine
       Model.Engine.Collisions
       Model.Engine.Commands
+      Model.Engine.DynamicSpawn
       Model.Engine.EnnemiAI
       Model.Engine.EnnemiCollisions
       Model.Engine.EnnemiSpawn

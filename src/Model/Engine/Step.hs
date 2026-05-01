@@ -15,6 +15,7 @@ import Model.Hitbox
 import Model.Meteore
 import Model.Objects
 import System.Random (StdGen, random)
+import Model.Engine.DynamicSpawn
 
 -- | Application d'un événement du script.
 appliquerEvenement :: Evenement -> Moteur -> Moteur
@@ -58,7 +59,7 @@ finDeTourMoteurEither m
 
           -- Nouvelle étape : apparition automatique des ennemis.
           mSpawn =
-            genererEnnemiSiBesoin m1
+            genererObjetsDynamiques m1
 
           (scrollNow, cadScroll') =
             tickCadence (mCadScroll mSpawn)

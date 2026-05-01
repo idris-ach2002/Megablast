@@ -382,3 +382,29 @@ spec = do
 
       length (mJoueuses m1) `shouldBe` length (mJoueuses m2)
       prop_inv_moteur m1 `shouldBe` True
+      
+  describe "Moteur: génération dynamique bornée" $ do
+    it "préserve l'invariant du moteur" $ do
+      let Right m = mkMoteurPartie configPartieDefaut
+          m' = genererObjetsDynamiques m
+
+      prop_inv_moteur m' `shouldBe` True
+
+    it "ne dépasse jamais les quotas d'objets actifs" $ do
+      let Right m0 = mkMoteurPartie configPartieDefaut
+          mFinal = iterate finDeTourMoteur m0 !! 5000
+
+      length (mEnnemis mFinal) `shouldSatisfy` (<= maxEnnemisDynamiques)
+      length (mMeteores mFinal) `shouldSatisfy` (<= maxMeteoresDynamiques)
+      length (mObstacles mFinal) `shouldSatisfy` (<= maxObstaclesDynamiques)
+      prop_inv_moteur mFinal `shouldBe` True
+
+    it "ajoute au moins un objet dynamique après assez de tours" $ do
+      let Right m0 = mkMoteurPartie configPartieDefaut
+          mFinal = iterate finDeTourMoteur m0 !! 600
+          nbObjets =
+              length (mEnnemis mFinal)
+            + length (mMeteores mFinal)
+            + length (mObstacles mFinal)
+
+      nbObjets `shouldSatisfy` (> 0)

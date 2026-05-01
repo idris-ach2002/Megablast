@@ -22,6 +22,7 @@ module Model.Engine
   , module Model.Engine.EnnemiCollisions
   , module Model.Score
   , module Model.Engine.GameConfig
+  , module Model.Engine.DynamicSpawn
   ) where
 
 import Model.Engine.Collisions
@@ -38,3 +39,4 @@ import Model.Engine.EnnemiAI
 import Model.Engine.EnnemiCollisions
 import Model.Score
 import Model.Engine.GameConfig
+import Model.Engine.DynamicSpawn
