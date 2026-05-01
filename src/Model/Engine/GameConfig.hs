@@ -54,6 +54,15 @@ cadenceScrollInitiale :: Int
 cadenceScrollInitiale =
   1
 
+cadenceTirJoueuse :: ConfigPartie -> Int
+cadenceTirJoueuse config =
+  case cfgMode config of
+    MonoJoueur ->
+      1
+
+    DuoJoueurs ->
+      2
+
 cadenceJoueuseInitiale :: Int
 cadenceJoueuseInitiale =
   1

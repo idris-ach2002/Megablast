@@ -382,7 +382,11 @@ spec = do
 
       length (mJoueuses m1) `shouldBe` length (mJoueuses m2)
       prop_inv_moteur m1 `shouldBe` True
-      
+    
+    it "définit une cadence de tir valide selon le mode" $ do
+      mkCadence (cadenceTirJoueuse configPartieDefaut) `shouldSatisfy` isRightWith prop_inv_cadence
+      mkCadence (cadenceTirJoueuse configPartieDuo) `shouldSatisfy` isRightWith prop_inv_cadence
+
   describe "Moteur: génération dynamique bornée" $ do
     it "préserve l'invariant du moteur" $ do
       let Right m = mkMoteurPartie configPartieDefaut

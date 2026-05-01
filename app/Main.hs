@@ -24,15 +24,24 @@ fps = 60
 
 main :: IO ()
 main = do
-  let moteurE = mkMoteurPartie configPartieDefaut
+  let config = configPartieDefaut
+      moteurE = mkMoteurPartie config
+
   case moteurE of
-    Left err -> putStrLn $ "Erreur initialisation moteur: " ++ show err
-    Right m  ->
-      case mkCadence 3 of
-        Left err  -> putStrLn $ "Erreur cadence tir: " ++ show err
+    Left err ->
+      putStrLn $ "Erreur initialisation moteur: " ++ show err
+
+    Right m ->
+      case mkCadence (cadenceTirJoueuse config) of
+        Left err ->
+          putStrLn $ "Erreur cadence tir: " ++ show err
+
         Right cadTir -> do
           assets <- chargerAssetsView
-          let appState = mkAppStateFull (mkAppState m cadTir)
+
+          let appState =
+                mkAppStateFull (mkAppState m cadTir)
+
           play
             fenetre
             couleurFond
