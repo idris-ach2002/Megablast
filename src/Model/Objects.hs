@@ -159,6 +159,11 @@ data VaisseauJoueuse = VaisseauJoueuse
   , vjCadence :: Cadence
   } deriving (Eq, Show)
 
+-- | Points de vie max d'une joueuse
+pvMaxJoueuse :: Int
+pvMaxJoueuse =
+  100
+
 vjHitbox :: VaisseauJoueuse -> Hitbox
 vjHitbox = hitboxPartiesVaisseau . vjForme
 

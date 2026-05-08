@@ -36,8 +36,9 @@ prop_partie_en_cours :: Moteur -> Bool
 prop_partie_en_cours m =
   any joueuseEncoreEnJeu (mJoueuses m)
 
-pvRespawnMinimal :: Int
-pvRespawnMinimal = 1
+pvRespawnJoueuse :: Int
+pvRespawnJoueuse =
+  pvMaxJoueuse
 
 distanceRepousseMur :: Int
 distanceRepousseMur = 10
@@ -66,7 +67,16 @@ reapparaitreJoueuse :: VaisseauJoueuse -> VaisseauJoueuse
 reapparaitreJoueuse v
   | vjPv v > 0      = v
   | vjEssais v <= 0 = v
-  | otherwise       = v { vjPv = pvRespawnMinimal, vjEssais = vjEssais v - 1 }
+  | otherwise       = v { vjPv = pvRespawnJoueuse, vjEssais = vjEssais v - 1 }
+
+prop_post_reapparaitreJoueuse :: VaisseauJoueuse -> Bool
+prop_post_reapparaitreJoueuse v =
+  let v' = reapparaitreJoueuse v
+  in     prop_inv_vaisseau v'
+      && if vjPv v > 0 || vjEssais v <= 0
+           then v' == v
+           else vjPv v' == pvRespawnJoueuse
+             && vjEssais v' == vjEssais v - 1
 
 -- | Applique un dégât à une joueuse puis gère immédiatement la transition vers
 --   l'état "essai consommé / respawn" quand c'est nécessaire.

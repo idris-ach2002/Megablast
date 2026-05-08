@@ -44,7 +44,7 @@ prop_inv_configPartie _ =
 
 pvInitialJoueuse :: Int
 pvInitialJoueuse =
-  100
+  pvMaxJoueuse
 
 essaisInitiauxJoueuse :: Int
 essaisInitiauxJoueuse =
