@@ -30,7 +30,7 @@ dessinerHUDJoueuse tour idx v =
   pictures
     [ dessinerNomJoueuse idx xBase yBase
     , dessinerBarreVie tour (xBase + 45) (yBase - 2) (pourcentageVie v)
-    , dessinerEssais (xBase + 210) yBase v
+    , dessinerEssais (xBase + 600) (yBase - 2) v
     ]
   where
     xBase =

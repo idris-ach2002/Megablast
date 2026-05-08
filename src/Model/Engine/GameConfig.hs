@@ -44,11 +44,11 @@ prop_inv_configPartie _ =
 
 pvInitialJoueuse :: Int
 pvInitialJoueuse =
-  pvMaxJoueuse
+  1
 
 essaisInitiauxJoueuse :: Int
 essaisInitiauxJoueuse =
-  2
+  1
 
 cadenceScrollInitiale :: Int
 cadenceScrollInitiale =

@@ -40,6 +40,6 @@ dessinerBoutonRetourAccueil =
     , color white $
         translate (-185) (-87) $
           scale 0.20 0.20 $
-            text "[Entree]"
+            text "Ecran d'acceuil [Entree]"
 
     ]
