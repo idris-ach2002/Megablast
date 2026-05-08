@@ -1,14 +1,13 @@
 module Main where
 
 import Graphics.Gloss
-import Model.Engine
-import Model.Objects
-import View.View
-import Controller.Controller
+import Controller.AppController
+import View.AppView
 import View.Assets
+import View.View
 
 ---------------------------------------------------------------------------------
--- Fenêtre Gloss
+-- Fenetre Gloss
 ---------------------------------------------------------------------------------
 
 fenetre :: Display
@@ -19,34 +18,18 @@ fps :: Int
 fps = 60
 
 ---------------------------------------------------------------------------------
--- Point d'entrée
+-- Point d'entree
 ---------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
-  let config = configPartieDefaut
-      moteurE = mkMoteurPartie config
+  assets <- chargerAssetsView
 
-  case moteurE of
-    Left err ->
-      putStrLn $ "Erreur initialisation moteur: " ++ show err
-
-    Right m ->
-      case mkCadence (cadenceTirJoueuse config) of
-        Left err ->
-          putStrLn $ "Erreur cadence tir: " ++ show err
-
-        Right cadTir -> do
-          assets <- chargerAssetsView
-
-          let appState =
-                mkAppStateFull (mkAppState m cadTir)
-
-          play
-            fenetre
-            couleurFond
-            fps
-            appState
-            (dessinerMoteurAvecAssets assets . asMoteur . asfBase)
-            gererEvenementFull
-            simulerStep
+  play
+    fenetre
+    couleurFond
+    fps
+    etatApplicationInitial
+    (dessinerEtatApplication assets)
+    gererEvenementEtatApplication
+    simulerEtatApplication

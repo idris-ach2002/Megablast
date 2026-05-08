@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Controller.AppController
       Controller.Controller
       Model.Engine
       Model.Engine.Collisions
@@ -47,6 +48,8 @@ library
       Model.Objects
       Model.Score
       Model.VaisseauForme
+      View.AccueilView
+      View.AppView
       View.Assets
       View.Background
       View.EnnemiView
