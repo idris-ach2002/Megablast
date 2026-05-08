@@ -7,6 +7,7 @@ import Controller.AppController
 import Controller.Controller
 import View.AccueilView
 import View.Assets
+import View.GameOverView
 import View.View
 
 ---------------------------------------------------------------------------------
@@ -23,3 +24,6 @@ dessinerEtatApplication assets etat =
 
     Partie appState ->
       dessinerMoteurAvecAssets assets $ asMoteur $ asfBase appState
+
+    EcranGameOver _ ->
+      dessinerGameOver

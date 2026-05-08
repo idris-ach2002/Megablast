@@ -44,25 +44,6 @@ dessinerProjectile p =
           TirEnnemi  -> Theme.couleurProjEnnemi
   in HB.dessinerHitbox c (prHitbox p)
 
-dessinerGameOver :: Picture
-dessinerGameOver =
-  pictures
-    [ color (makeColorI 0 0 0 180) $
-        rectangleSolid
-          (fromIntegral largeurFenetre)
-          (fromIntegral hauteurFenetre)
-
-    , color red $
-        translate (-140) 20 $
-          scale 0.4 0.4 $
-            text "GAME OVER"
-
-    , color white $
-        translate (-110) (-30) $
-          scale 0.15 0.15 $
-            text "Appuyez sur R pour recommencer"
-    ]
-
 ---------------------------------------------------------------------------------
 -- Rendu principal du moteur
 ---------------------------------------------------------------------------------
@@ -81,26 +62,20 @@ assetsVides =
     }
 
 -- | Rendu principal avec assets graphiques.
+--   Cette vue dessine uniquement le moteur. Les écrans applicatifs comme
+--   l'accueil et le game over sont routés par View.AppView.
 dessinerMoteurAvecAssets :: AssetsView -> Moteur -> Picture
-dessinerMoteurAvecAssets assets m
-  | not (prop_partie_en_cours m) =
-      pictures
-        [ dessinerFondEspace (mTour m)
-        , dessinerScore (mScore m)
-        , dessinerTour (mTour m)
-        , dessinerGameOver
-        ]
-
-  | otherwise =
-      pictures $
-        [ dessinerFondEspace (mTour m)
-        , dessinerMursNiveauAvecAssets assets (mTour m) (mMurs m)
-        ]
-        ++ map dessinerMeteore         (mMeteores m)
-        ++ map ObstacleView.dessinerObstacle (mObstacles m)        ++ map dessinerProjectile      (mProjectiles m)
-        ++ map dessinerEnnemi          (mEnnemis m)
-        ++ map dessinerVaisseauJoueuse (mJoueuses m)
-        ++ zipWith (dessinerHUDJoueuse (mTour m)) [0 ..] (mJoueuses m)
-        ++ [ dessinerScore (mScore m)
-          , dessinerTour (mTour m)
-          ]
+dessinerMoteurAvecAssets assets m =
+  pictures $
+    [ dessinerFondEspace (mTour m)
+    , dessinerMursNiveauAvecAssets assets (mTour m) (mMurs m)
+    ]
+    ++ map dessinerMeteore               (mMeteores m)
+    ++ map ObstacleView.dessinerObstacle (mObstacles m)
+    ++ map dessinerProjectile            (mProjectiles m)
+    ++ map dessinerEnnemi                (mEnnemis m)
+    ++ map dessinerVaisseauJoueuse       (mJoueuses m)
+    ++ zipWith (dessinerHUDJoueuse (mTour m)) [0 ..] (mJoueuses m)
+    ++ [ dessinerScore (mScore m)
+       , dessinerTour (mTour m)
+       ]

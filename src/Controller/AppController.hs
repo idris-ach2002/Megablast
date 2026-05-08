@@ -13,7 +13,7 @@ module Controller.AppController
 import Graphics.Gloss.Interface.Pure.Game
 import Controller.Controller
 import Model.Engine
-import Model.Objects
+import Model.Objects (mkCadence)
 
 ---------------------------------------------------------------------------------
 -- Etat applicatif de haut niveau
@@ -22,10 +22,11 @@ import Model.Objects
 -- | Etat de haut niveau de l'application Gloss.
 --
 --   Le moteur reste responsable de l'etat de jeu pur. Cet etat applicatif
---   separe explicitement l'ecran de navigation de la partie en cours.
+--   separe explicitement les ecrans de navigation de la partie en cours.
 data EtatApplication a
   = EcranAccueil
   | Partie a
+  | EcranGameOver a
 
 etatApplicationInitial :: EtatApplication AppStateFull
 etatApplicationInitial =
@@ -34,11 +35,12 @@ etatApplicationInitial =
 -- | Invariant generique de l'etat applicatif.
 --
 --   L'ecran d'accueil ne contient pas d'etat de jeu.
---   Une partie est valide lorsque le predicat fourni par l'appelant l'est.
 prop_inv_etatApplication :: (a -> Bool) -> EtatApplication a -> Bool
 prop_inv_etatApplication _ EcranAccueil =
   True
 prop_inv_etatApplication propPartie (Partie partie) =
+  propPartie partie
+prop_inv_etatApplication propPartie (EcranGameOver partie) =
   propPartie partie
 
 prop_inv_etatApplicationFull :: EtatApplication AppStateFull -> Bool
@@ -77,8 +79,14 @@ gererEvenementEtatApplication event etat =
     EcranAccueil ->
       gererEvenementAccueil event
 
-    Partie appState ->
-      gererEvenementPartie event appState
+    Partie appState
+      | partieTerminee appState ->
+          gererEvenementGameOver event appState
+      | otherwise ->
+          gererEvenementPartie event appState
+
+    EcranGameOver appState ->
+      gererEvenementGameOver event appState
 
 gererEvenementAccueil :: Event -> EtatApplication AppStateFull
 gererEvenementAccueil event =
@@ -99,7 +107,16 @@ gererEvenementPartie event appState =
       EcranAccueil
 
     _ ->
-      Partie $ gererEvenementFull event appState
+      normaliserEtatPartie $ gererEvenementFull event appState
+
+gererEvenementGameOver :: Event -> AppStateFull -> EtatApplication AppStateFull
+gererEvenementGameOver event appState =
+  case event of
+    EventKey (SpecialKey KeyEnter) Down _ _ ->
+      EcranAccueil
+
+    _ ->
+      EcranGameOver appState
 
 ---------------------------------------------------------------------------------
 -- Simulation
@@ -115,4 +132,18 @@ simulerEtatApplication dt etat =
       EcranAccueil
 
     Partie appState ->
-      Partie $ simulerStep dt appState
+      normaliserEtatPartie $ simulerStep dt appState
+
+    EcranGameOver appState ->
+      EcranGameOver appState
+
+normaliserEtatPartie :: AppStateFull -> EtatApplication AppStateFull
+normaliserEtatPartie appState
+  | partieTerminee appState =
+      EcranGameOver appState
+  | otherwise =
+      Partie appState
+
+partieTerminee :: AppStateFull -> Bool
+partieTerminee appState =
+  not $ prop_partie_en_cours $ asMoteur $ asfBase appState

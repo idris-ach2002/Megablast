@@ -3,5 +3,5 @@
 
 * Dans le model rejouter les pre et post cond manquantes
 
-* 
+* PB avec les essai : même avec deux essai on meurt dès qu'on en perd un
 

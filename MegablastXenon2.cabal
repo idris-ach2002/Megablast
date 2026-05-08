@@ -54,6 +54,7 @@ library
       View.Background
       View.EnnemiView
       View.FormesView
+      View.GameOverView
       View.HitboxView
       View.HUDView
       View.MeteoreView
