@@ -5,6 +5,7 @@ module View.AppView
 import Graphics.Gloss
 import Controller.AppController
 import Controller.Controller
+import Model.Engine (mScores)
 import View.AccueilView
 import View.Assets
 import View.GameOverView
@@ -25,5 +26,8 @@ dessinerEtatApplication assets etat =
     Partie appState ->
       dessinerMoteurAvecAssets assets $ asMoteur $ asfBase appState
 
-    EcranGameOver _ ->
-      dessinerGameOver
+    EcranGameOver appState ->
+      dessinerGameOver $
+        mScores $
+          asMoteur $
+            asfBase appState
