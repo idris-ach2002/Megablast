@@ -18,6 +18,9 @@ data AppState = AppState
   , asPause          :: Bool
   , asMoteurInitial  :: Moteur
   , asCadTirJoueuse  :: Cadence
+  --   Tirs issus d'un EventKey Down : consommés une seule fois au prochain tour,
+  --   puis effacés. Évite que Tirer soit rejoué à chaque tour d'un même frame
+  , asTirsEnAttente  :: [(Int, Action)]
   }
 
 mkAppState :: Moteur -> Cadence -> AppState
@@ -27,6 +30,7 @@ mkAppState m cadTir = AppState
   , asPause          = False
   , asMoteurInitial  = m
   , asCadTirJoueuse  = cadTir
+  , asTirsEnAttente  = []
   }
 
 ---------------------------------------------------------------------------------
@@ -46,6 +50,10 @@ toucheVersAction (SpecialKey KeyRight)  = Just (0, Deplacer Droite)
 toucheVersAction (SpecialKey KeyEnter)  = Just (0, Tirer)
 toucheVersAction _                      = Nothing
 
+estActionTir :: Action -> Bool
+estActionTir Tirer = True
+estActionTir _     = False
+
 ---------------------------------------------------------------------------------
 -- Gestion des événements Gloss
 ---------------------------------------------------------------------------------
@@ -54,11 +62,18 @@ gererEvenement :: Event -> AppState -> AppState
 gererEvenement (EventKey (Char 'p') Down _ _) as =
   as { asPause = not (asPause as) }
 gererEvenement (EventKey (Char 'r') Down _ _) as =
-  as { asMoteur      = asMoteurInitial as
-     , asTouchesPres = Set.empty
-     , asPause       = False }
+  as { asMoteur         = asMoteurInitial as
+     , asTouchesPres    = Set.empty
+     , asTirsEnAttente  = []
+     , asPause          = False }
 gererEvenement (EventKey k Down _ _) as =
-  as { asTouchesPres = Set.insert k (asTouchesPres as) }
+  -- Si la touche correspond à Tirer, on l'enregistre dans asTirsEnAttente
+  -- plutôt que dans asTouchesPres, pour n'être consommée qu'une seule fois.
+  case toucheVersAction k of
+    Just (i, Tirer) ->
+      as { asTirsEnAttente = asTirsEnAttente as ++ [(i, Tirer)] }
+    _ ->
+      as { asTouchesPres = Set.insert k (asTouchesPres as) }
 gererEvenement (EventKey k Up _ _) as =
   as { asTouchesPres = Set.delete k (asTouchesPres as) }
 gererEvenement _ as = as
@@ -73,12 +88,14 @@ prop_post_gererEvenement _ as' = prop_inv_moteur (asMoteur as')
 -- Application des commandes clavier
 ---------------------------------------------------------------------------------
 
+-- | Actions de déplacement issues des touches maintenues (sans Tirer).
 actionsDepuisTouches :: AppState -> [(Int, Action)]
 actionsDepuisTouches as =
   [ (i, a)
   | k <- Set.toList (asTouchesPres as)
   , Just (i, a) <- [toucheVersAction k]
   , i < length (mJoueuses (asMoteur as))
+  , not (estActionTir a)
   ]
 
 appliquerActions :: [(Int, Action)] -> Cadence -> Moteur -> Moteur
@@ -114,34 +131,53 @@ data AppStateFull = AppStateFull
 mkAppStateFull :: AppState -> AppStateFull
 mkAppStateFull as = AppStateFull as 0
 
--- | Applique n tours moteur de manière sûre en rejouant les actions courantes à
--- chaque tour. Si un tour échoue, on s'arrête et on renvoie l'erreur.
-appliquerNToursAvecCommandesEither :: Int -> [(Int, Action)] -> Cadence -> Moteur -> Either String Moteur
-appliquerNToursAvecCommandesEither n actions cadTir m
-  | n <= 0 = Right m
+-- | Applique n tours moteur de manière sûre.
+-- 
+--   - firstTourActions : actions du premier tour uniquement (inclut les Tirer en attente).
+--   - recurActions     : actions répétées sur les tours suivants (déplacements seuls).
+appliquerNToursAvecCommandesEither
+  :: Int
+  -> [(Int, Action)]   -- ^ actions du premier tour (avec Tirer)
+  -> [(Int, Action)]   -- ^ actions des tours suivants (sans Tirer)
+  -> Cadence
+  -> Moteur
+  -> Either String Moteur
+appliquerNToursAvecCommandesEither n firstActions recurActions cadTir m
+  | n <= 0    = Right m
   | otherwise =
-      let m0 = appliquerActions actions cadTir m
+      let m0 = appliquerActions firstActions cadTir m
       in case finDeTourMoteurEither m0 of
            Left err -> Left (show err)
-           Right m' -> appliquerNToursAvecCommandesEither (n - 1) actions cadTir m'
+           Right m' ->
+             -- À partir du 2e tour on n'utilise plus que recurActions
+             appliquerNToursAvecCommandesEither (n - 1) recurActions recurActions cadTir m'
 
 simulerStep :: Float -> AppStateFull -> AppStateFull
 simulerStep dt asf
   | asPause (asfBase asf) = asf
   | not (prop_partie_en_cours (asMoteur (asfBase asf))) = asf
   | otherwise =
-      let accu'   = asfAccu asf + dt
-          nTours  = floor (accu' * toursParSeconde) :: Int
-          accu''  = accu' - fromIntegral nTours / toursParSeconde
-          actions = actionsDepuisTouches (asfBase asf)
-          cadTir  = asCadTirJoueuse (asfBase asf)
-          mInitial = asMoteur (asfBase asf)
-          m' = case appliquerNToursAvecCommandesEither nTours actions cadTir mInitial of
+      let accu'        = asfAccu asf + dt
+          nTours       = floor (accu' * toursParSeconde) :: Int
+          accu''       = accu' - fromIntegral nTours / toursParSeconde
+
+          moveActions  = actionsDepuisTouches (asfBase asf)
+          -- Les tirs en attente ne sont appliqués qu'au premier tour.
+          tirsAttente  = asTirsEnAttente (asfBase asf)
+          firstActions = moveActions ++ tirsAttente
+
+          cadTir       = asCadTirJoueuse (asfBase asf)
+          mInitial     = asMoteur (asfBase asf)
+
+          m' = case appliquerNToursAvecCommandesEither
+                       nTours firstActions moveActions cadTir mInitial of
                  Right mOk -> mOk
                  Left _    -> mInitial
-      in asf { asfBase = (asfBase asf) { asMoteur = m' }
-             , asfAccu = accu''
-             }
+
+          -- On efface les tirs consommés.
+          base' = (asfBase asf) { asMoteur = m', asTirsEnAttente = [] }
+
+      in asf { asfBase = base', asfAccu = accu'' }
 
 prop_pre_simulerStep :: AppStateFull -> Bool
 prop_pre_simulerStep = prop_inv_moteur . asMoteur . asfBase
