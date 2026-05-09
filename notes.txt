@@ -1,7 +1,4 @@
 
 ** à long terme mettre des export explicite et enlever dans .cabal le fait qu'on ignore le warning
 
-* Dans le model rejouter les pre et post cond manquantes
-
-* PB avec les essai : même avec deux essai on meurt dès qu'on en perd un
 

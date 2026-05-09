@@ -13,14 +13,27 @@ import Model.Score
 --
 --   Convention :
 --   - essais > 0 : la joueuse peut encore jouer ;
---   - essais == 0 : la joueuse est éliminée et doit disparaître.
+--   - essais == 0 : la joueuse est éliminée.
+--
+-- Important en multijoueur : on ne doit jamais compacter la liste
+-- mJoueuses après une élimination. Les indices de cette liste sont les
+-- identités stables des joueuses : indice 0 = J1, indice 1 = J2.
+-- Si J1 disparaît physiquement de la liste, J2 prend l'indice 0 et récupère
+-- les touches ainsi que le score de J1.
 joueuseEncoreEnJeu :: VaisseauJoueuse -> Bool
 joueuseEncoreEnJeu v =
   vjPv v > 0 && vjEssais v > 0
 
+joueusesActives :: [VaisseauJoueuse] -> [VaisseauJoueuse]
+joueusesActives =
+  filter joueuseEncoreEnJeu
+
+-- | Conservé pour compatibilité avec le reste du moteur, mais cette fonction
+--   ne supprime plus les joueuses éliminées. Elle stabilise les slots joueurs.
+--   La disparition visuelle se fait côté vue avec joueusesActives.
 supprimerJoueusesEliminees :: [VaisseauJoueuse] -> [VaisseauJoueuse]
 supprimerJoueusesEliminees =
-  filter joueuseEncoreEnJeu
+  id
 
 prop_pre_supprimerJoueusesEliminees :: [VaisseauJoueuse] -> Bool
 prop_pre_supprimerJoueusesEliminees =
@@ -29,8 +42,7 @@ prop_pre_supprimerJoueusesEliminees =
 prop_post_supprimerJoueusesEliminees :: [VaisseauJoueuse] -> [VaisseauJoueuse] -> Bool
 prop_post_supprimerJoueusesEliminees js js' =
      all prop_inv_vaisseau js'
-  && all joueuseEncoreEnJeu js'
-  && length js' <= length js
+  && length js' == length js
 
 prop_partie_en_cours :: Moteur -> Bool
 prop_partie_en_cours m =
@@ -65,18 +77,33 @@ repousseHorsMur mur d =
 
 reapparaitreJoueuse :: VaisseauJoueuse -> VaisseauJoueuse
 reapparaitreJoueuse v
-  | vjPv v > 0      = v
-  | vjEssais v <= 0 = v
-  | otherwise       = v { vjPv = pvRespawnJoueuse, vjEssais = vjEssais v - 1 }
+  | vjPv v > 0 =
+      v
+
+  | vjEssais v <= 0 =
+      v { vjPv = 0, vjEssais = 0 }
+
+  | vjEssais v == 1 =
+      v { vjPv = 0, vjEssais = 0 }
+
+  | otherwise =
+      v { vjPv = pvRespawnJoueuse, vjEssais = vjEssais v - 1 }
 
 prop_post_reapparaitreJoueuse :: VaisseauJoueuse -> Bool
 prop_post_reapparaitreJoueuse v =
   let v' = reapparaitreJoueuse v
   in     prop_inv_vaisseau v'
-      && if vjPv v > 0 || vjEssais v <= 0
-           then v' == v
-           else vjPv v' == pvRespawnJoueuse
-             && vjEssais v' == vjEssais v - 1
+      && case () of
+           _ | vjPv v > 0 ->
+                 v' == v
+
+             | vjEssais v <= 1 ->
+                    vjPv v' == 0
+                 && vjEssais v' == 0
+
+             | otherwise ->
+                    vjPv v' == pvRespawnJoueuse
+                 && vjEssais v' == vjEssais v - 1
 
 -- | Applique un dégât à une joueuse puis gère immédiatement la transition vers
 --   l'état "essai consommé / respawn" quand c'est nécessaire.
@@ -90,12 +117,16 @@ encaisserDegatsJoueuse n v
 
 joueuseToucheePar :: VaisseauJoueuse -> Projectile -> (VaisseauJoueuse, Bool)
 joueuseToucheePar v p
+  | not (joueuseEncoreEnJeu v) =
+      (v, False)
   | prOwner p == TirEnnemi
     && collision (vjHitbox v) (prHitbox p) = (encaisserDegatJoueuse v, True)
   | otherwise                              = (v, False)
 
 joueuseToucheeMeteore :: VaisseauJoueuse -> Meteore -> (VaisseauJoueuse, Bool)
 joueuseToucheeMeteore v mt
+  | not (joueuseEncoreEnJeu v) =
+      (v, False)
   | collision (vjHitbox v) (mtHitbox mt) =
       (encaisserDegatsJoueuse (mtDegats mt) v, True)
   | otherwise =
@@ -120,21 +151,25 @@ ennemiToucheeParAvecMort e p
 
 joueuseToucheeObstacle :: VaisseauJoueuse -> Obstacle -> VaisseauJoueuse
 joueuseToucheeObstacle v o
+  | not (joueuseEncoreEnJeu v)           = v
   | collision (vjHitbox v) (obsHitbox o) = repousseVaisseau Haut v
   | otherwise                            = v
 
 joueuseToucheeEnnemi :: VaisseauJoueuse -> Ennemi -> VaisseauJoueuse
 joueuseToucheeEnnemi v e
+  | not (joueuseEncoreEnJeu v)        = v
   | collision (vjHitbox v) (eHitbox e) = repousseVaisseau Haut (encaisserDegatJoueuse v)
   | otherwise                          = v
 
 joueuseToucheeMurGauche :: Hitbox -> VaisseauJoueuse -> VaisseauJoueuse
 joueuseToucheeMurGauche mur v
+  | not (joueuseEncoreEnJeu v) = v
   | collision (vjHitbox v) mur = repousseHorsMur mur Gauche v
   | otherwise                  = v
 
 joueuseToucheeMurDroit :: Hitbox -> VaisseauJoueuse -> VaisseauJoueuse
 joueuseToucheeMurDroit mur v
+  | not (joueuseEncoreEnJeu v) = v
   | collision (vjHitbox v) mur = repousseHorsMur mur Droite v
   | otherwise                  = v
 

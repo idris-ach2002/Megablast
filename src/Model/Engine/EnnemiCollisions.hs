@@ -87,6 +87,8 @@ joueuseToucheeParEnnemis ennemis joueuse =
 
 joueuseToucheeParEnnemi :: VaisseauJoueuse -> Ennemi -> VaisseauJoueuse
 joueuseToucheeParEnnemi joueuse ennemi
+  | not (joueuseEncoreEnJeu joueuse) =
+      joueuse
   | collision (vjHitbox joueuse) (eHitbox ennemi) =
       pousserJoueuse
         distanceRepousseJoueuseParEnnemi

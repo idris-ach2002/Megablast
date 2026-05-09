@@ -21,8 +21,10 @@ prop_joueuses_non_croissantes m
   | not (prop_inv_moteur m)      = True
   | not (prop_partie_en_cours m) = True
   | otherwise =
-      length (mJoueuses (finDeTourMoteur m)) <= length (mJoueuses m)
+      length (mJoueuses (finDeTourMoteur m)) == length (mJoueuses m)
 
+-- | Les slots joueurs sont stables : J1 reste à l'indice 0, J2 à l'indice 1.
+--   C'est essentiel pour ne pas mélanger commandes et scores en multijoueur.
 prop_joueuses_stables :: Moteur -> Bool
 prop_joueuses_stables =
   prop_joueuses_non_croissantes

@@ -35,8 +35,7 @@ prop_post_finDeTourMoteur :: Moteur -> Moteur -> Bool
 prop_post_finDeTourMoteur m m' =
      prop_inv_moteur m'
   && mTour m' == mTour m + 1
-  && length (mJoueuses m') <= length (mJoueuses m)
-  && all joueuseEncoreEnJeu (mJoueuses m')
+  && length (mJoueuses m') == length (mJoueuses m)
   && all prop_inv_projectile (mProjectiles m')
 
 -- | Version sûre de la fin de tour. Elle rend explicite l'échec par `Either`

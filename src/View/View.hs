@@ -75,7 +75,7 @@ dessinerMoteurAvecAssets assets m =
     ++ map ObstacleView.dessinerObstacle (mObstacles m)
     ++ map dessinerProjectile            (mProjectiles m)
     ++ map dessinerEnnemi                (mEnnemis m)
-    ++ map dessinerVaisseauJoueuse       (mJoueuses m)
+    ++ map dessinerVaisseauJoueuse       (joueusesActives (mJoueuses m))
     ++ zipWith (dessinerHUDJoueuse (mTour m)) [0 ..] (mJoueuses m)
     ++ dessinerScoresJoueuses            (mScores m)
     ++ [ dessinerTour (mTour m)
