@@ -110,6 +110,8 @@ test-suite MegablastXenon2-test
   other-modules:
       EngineSpec
       HitboxSpec
+      MeteoreScoreSpec
+      ObjectsSpec
       SpecHelpers
       VaisseauSpec
       Paths_MegablastXenon2

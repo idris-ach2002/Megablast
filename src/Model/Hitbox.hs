@@ -21,11 +21,30 @@ prop_inv_hitbox (Point _ _)         = True
 prop_inv_hitbox (Disque _ _ r)      = r > 0
 prop_inv_hitbox (Rectangle _ _ w h) = w > 0 && h > 0
 prop_inv_hitbox (Composee hs)       = length hs >= 2 && all prop_inv_hitbox hs
---TODO: idéalement l'invariant c'est que les coordonnées soit tous > (comment approximer le mieux ?)
-prop_inv_hitbox (MurGauche ((_, y1) : (_, y2) : _)) = y1 < y2
-prop_inv_hitbox (MurGauche _)                       = False
-prop_inv_hitbox (MurDroit  ((_, y1) : (_, y2) : _)) = y1 < y2
-prop_inv_hitbox (MurDroit  _)                       = False
+prop_inv_hitbox (MurGauche pts)     = prop_inv_points_mur pts
+prop_inv_hitbox (MurDroit pts)      = prop_inv_points_mur pts
+
+-- Les murs peuvent être infinis. On vérifie donc un préfixe fini, suffisant pour
+-- garantir que les fonctions du moteur ne reçoivent jamais un mur vide, dégénéré
+-- ou immédiatement non croissant, sans forcer toute une liste infinie.
+nombrePointsControleMur :: Int
+nombrePointsControleMur = 200
+
+prop_inv_points_mur :: [(Int, Int)] -> Bool
+prop_inv_points_mur pts =
+     aAuMoinsDeuxPoints pts
+  && ordonneesStrictementCroissantes (take nombrePointsControleMur pts)
+
+-- Version productive sur listes finies et infinies.
+aAuMoinsDeuxPoints :: [a] -> Bool
+aAuMoinsDeuxPoints (_:_:_) = True
+aAuMoinsDeuxPoints _       = False
+
+ordonneesStrictementCroissantes :: [(Int, Int)] -> Bool
+ordonneesStrictementCroissantes [] = True
+ordonneesStrictementCroissantes [_] = True
+ordonneesStrictementCroissantes ((_, y1) : p2@(_, y2) : rest) =
+  y1 < y2 && ordonneesStrictementCroissantes (p2 : rest)
 
 -- Smart constructors
 mkPoint :: Int -> Int -> Hitbox
