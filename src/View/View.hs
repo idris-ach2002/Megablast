@@ -9,6 +9,7 @@ module View.View
 import Graphics.Gloss
 import Model.Engine
 import Model.Objects
+import Model.Score (Score, scoreValeur)
 import qualified View.HitboxView as HB
 import View.MurView
 import qualified View.Theme as Theme
@@ -76,6 +77,6 @@ dessinerMoteurAvecAssets assets m =
     ++ map dessinerEnnemi                (mEnnemis m)
     ++ map dessinerVaisseauJoueuse       (mJoueuses m)
     ++ zipWith (dessinerHUDJoueuse (mTour m)) [0 ..] (mJoueuses m)
-    ++ [ dessinerScore (mScore m)
-       , dessinerTour (mTour m)
+    ++ dessinerScoresJoueuses            (mScores m)
+    ++ [ dessinerTour (mTour m)
        ]

@@ -12,14 +12,43 @@ scoreNul :: Score
 scoreNul =
   Score 0
 
+scoresNuls :: Int -> [Score]
+scoresNuls n
+  | n <= 0    = []
+  | otherwise = replicate n scoreNul
+
 prop_inv_score :: Score -> Bool
 prop_inv_score score =
   scoreValeur score >= 0
+
+prop_inv_scores :: [Score] -> Bool
+prop_inv_scores =
+  all prop_inv_score
 
 ajouterPoints :: Int -> Score -> Score
 ajouterPoints points score
   | points <= 0 = score
   | otherwise   = Score (scoreValeur score + points)
+
+-- | Ajoute des points au score d'une joueuse precise.
+--   Si l'indice est invalide, la liste de scores est laissee inchangee.
+ajouterPointsJoueuse :: Int -> Int -> [Score] -> [Score]
+ajouterPointsJoueuse indice points scores
+  | indice < 0 = scores
+  | otherwise  = ajouterAux scores indice
+  where
+    ajouterAux [] _ =
+      []
+
+    ajouterAux (s:ss) 0 =
+      ajouterPoints points s : ss
+
+    ajouterAux (s:ss) i =
+      s : ajouterAux ss (i - 1)
+
+scoreTotal :: [Score] -> Score
+scoreTotal scores =
+  Score (sum (map scoreValeur scores))
 
 scoreEnnemiBase :: Int
 scoreEnnemiBase =
@@ -41,6 +70,20 @@ scoreEnnemiDetruit tour =
 prop_post_ajouterPoints :: Int -> Score -> Bool
 prop_post_ajouterPoints points score =
   prop_inv_score (ajouterPoints points score)
+
+prop_post_ajouterPointsJoueuse :: Int -> Int -> [Score] -> Bool
+prop_post_ajouterPointsJoueuse indice points scores =
+  prop_inv_scores scores ==>
+    prop_inv_scores (ajouterPointsJoueuse indice points scores)
+  where
+    a ==> b = not a || b
+
+prop_post_scoreTotal :: [Score] -> Bool
+prop_post_scoreTotal scores =
+  prop_inv_scores scores ==>
+    prop_inv_score (scoreTotal scores)
+  where
+    a ==> b = not a || b
 
 prop_scoreEnnemiDetruit_positif :: Int -> Bool
 prop_scoreEnnemiDetruit_positif tour =

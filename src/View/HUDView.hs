@@ -1,12 +1,15 @@
 module View.HUDView
   ( dessinerHUDJoueuse
   , dessinerScore
+  , dessinerScores
+  , dessinerScoresJoueuses
   , dessinerTour
   ) where
 
 import Graphics.Gloss
 import Model.Engine
 import Model.Objects
+import Model.Score (Score, scoreValeur)
 import qualified View.Theme as Theme
 
 
@@ -149,6 +152,29 @@ dessinerScore score =
        translate x y $
          scale 0.12 0.12 $
            text txt
+
+-- | Affiche un score individuel, avec une numérotation humaine : J1, J2, ...
+--   La liste de scores vient de mScores, donc elle reste indépendante de
+--   l'affichage ou de la disparition éventuelle des vaisseaux éliminés.
+dessinerScoreJoueuse :: Int -> Score -> Picture
+dessinerScoreJoueuse indice score =
+  color (greyN 0.85) $
+    translate x y $
+      scale 0.12 0.12 $
+        text ("J" ++ show (indice + 1) ++ " Score: " ++ show (scoreValeur score))
+  where
+    x = fromIntegral (- largeurFenetre `div` 2) + 10
+    y = fromIntegral (- hauteurFenetre `div` 2) + 8 + fromIntegral (indice * 18)
+
+-- | Affiche tous les scores séparés des joueuses.
+dessinerScores :: [Score] -> [Picture]
+dessinerScores =
+  zipWith dessinerScoreJoueuse [0 ..]
+
+-- | Alias explicite, utile si on veut souligner que la liste vient de mScores.
+dessinerScoresJoueuses :: [Score] -> [Picture]
+dessinerScoresJoueuses =
+  dessinerScores
 
 dessinerTour :: Int -> Picture
 dessinerTour t =

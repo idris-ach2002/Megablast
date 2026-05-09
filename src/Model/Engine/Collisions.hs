@@ -108,7 +108,7 @@ ennemiToucheePar e p =
 
 ennemiToucheeParAvecMort :: Ennemi -> Projectile -> (Maybe Ennemi, Bool, Bool)
 ennemiToucheeParAvecMort e p
-  | prOwner p == TirJoueuse
+  | estTirJoueuse p
     && collision (eHitbox e) (prHitbox p) =
         let (PV pv) = ePV e
             pv' = pv - 1
@@ -174,18 +174,26 @@ resoudreCollisions m =
         , mProjectiles = projsApresJoueuses
         }
 
-    (enns2, projsRestes, scoreGagne) =
-      foldr appliquerProjSurEnnemis (mEnnemis m1, [], 0) (mProjectiles m1)
+    (enns2, projsRestes, scoresGagnes) =
+      foldr appliquerProjSurEnnemis (mEnnemis m1, [], mScores m1) (mProjectiles m1)
 
-    appliquerProjSurEnnemis p (es, acc, scoreAcc) =
+    appliquerProjSurEnnemis p (es, acc, scoresAcc) =
       let (es', consomme, ennemiDetruit) = parcourirEnnemis p es
-          scoreAcc' =
+          scoresAcc' =
             if ennemiDetruit
-              then scoreAcc + scoreEnnemiDetruit (mTour m1)
-              else scoreAcc
+              then crediterScoreProjectile p (scoreEnnemiDetruit (mTour m1)) scoresAcc
+              else scoresAcc
       in if consomme
-           then (es', acc, scoreAcc')
-           else (es', p : acc, scoreAcc')
+           then (es', acc, scoresAcc')
+           else (es', p : acc, scoresAcc')
+
+    crediterScoreProjectile p points scores =
+      case indiceJoueuseProjectile p of
+        Nothing ->
+          scores
+
+        Just indiceJoueuse ->
+          ajouterPointsJoueuse indiceJoueuse points scores
 
     parcourirEnnemis _ [] =
       ([], False, False)
@@ -202,7 +210,8 @@ resoudreCollisions m =
     m2 =
       m1 { mEnnemis = enns2
          , mProjectiles = projsRestes
-         , mScore = ajouterPoints scoreGagne (mScore m1)
+         , mScores = scoresGagnes
+         , mScore = scoreTotal scoresGagnes
          }
     (meteoresRestants, jousApresMeteores) =
       foldr appliquerMeteoreSurJoueuses ([], mJoueuses m2) (mMeteores m2)

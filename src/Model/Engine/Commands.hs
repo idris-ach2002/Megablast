@@ -37,5 +37,5 @@ appliquerCommande i Tirer cadTir m =
     Just v
       | not (joueuseEncoreEnJeu v) -> (m, Nothing)
       | otherwise ->
-          let p = tirVaisseau v cadTir
+          let p = tirVaisseau i v cadTir
           in (m { mProjectiles = mProjectiles m ++ [p] }, Just p)

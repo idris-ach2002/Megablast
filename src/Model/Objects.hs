@@ -80,20 +80,36 @@ defileObstacle (Obstacle h) = Obstacle (translateHitbox 0 (-1) h)
 data ProjectileOwner = TirJoueuse | TirEnnemi
   deriving (Eq, Show, Enum, Bounded)
 
+estTirJoueuse :: Projectile -> Bool
+estTirJoueuse p =
+  prOwner p == TirJoueuse
+
+indiceJoueuseProjectile :: Projectile -> Maybe Int
+indiceJoueuseProjectile p
+  | estTirJoueuse p = prJoueuse p
+  | otherwise       = Nothing
+
 data Projectile = Projectile
-  { prHitbox  :: Hitbox
-  , prDir     :: Direction
-  , prCadence :: Cadence
-  , prOwner   :: ProjectileOwner
+  { prHitbox   :: Hitbox
+  , prDir      :: Direction
+  , prCadence  :: Cadence
+  , prOwner    :: ProjectileOwner
+  , prJoueuse  :: Maybe Int
   } deriving (Eq, Show)
 
 prop_inv_projectile :: Projectile -> Bool
 prop_inv_projectile p =
-  prop_inv_hitbox (prHitbox p) && prop_inv_cadence (prCadence p)
+  prop_inv_hitbox (prHitbox p)
+  && prop_inv_cadence (prCadence p)
+  && maybe True (>= 0) (prJoueuse p)
+  && case prOwner p of
+       TirJoueuse -> True
+       TirEnnemi  -> prJoueuse p == Nothing
 
 mkProjectile :: Hitbox -> Direction -> Cadence -> ProjectileOwner -> Either Text Projectile
 mkProjectile h d c o
-  | prop_inv_hitbox h && prop_inv_cadence c = Right (Projectile h d c o)
+  | prop_inv_hitbox h && prop_inv_cadence c =
+      Right (Projectile h d c o Nothing)
   | otherwise = Left "Projectile invalide (hitbox ou cadence)"
 
 avanceProjectile :: Projectile -> Projectile
@@ -110,6 +126,7 @@ prop_post_avanceProjectile p p' =
   && prDir p' == prDir p
   && prCadence p' == prCadence p
   && prOwner p' == prOwner p
+  && prJoueuse p' == prJoueuse p
 
 finDeTourProjectile :: Projectile -> Projectile
 finDeTourProjectile p
@@ -127,6 +144,7 @@ prop_post_finDeTourProjectile p p' =
   prop_inv_projectile p'
   && prDir p' == prDir p
   && prOwner p' == prOwner p
+  && prJoueuse p' == prJoueuse p
 
 -- scrolling global: on tick une cadence, si moveNow alors tous les obstacles descendent
 finDeTourObstacles :: Cadence -> [Obstacle] -> (Cadence, [Obstacle])
@@ -159,7 +177,6 @@ data VaisseauJoueuse = VaisseauJoueuse
   , vjCadence :: Cadence
   } deriving (Eq, Show)
 
--- | Points de vie max d'une joueuse
 pvMaxJoueuse :: Int
 pvMaxJoueuse =
   100
@@ -236,24 +253,26 @@ prop_post_repousseVaisseau d v v' =
      prop_inv_vaisseau v'
   && deplaceVaisseau d v' == v
 
-tirVaisseau :: VaisseauJoueuse -> Cadence -> Projectile
-tirVaisseau v cadProj =
+tirVaisseau :: Int -> VaisseauJoueuse -> Cadence -> Projectile
+tirVaisseau indiceJoueuse v cadProj =
   Projectile
     { prHitbox  = vjHitboxTir v
     , prDir     = Haut
     , prCadence = cadProj
     , prOwner   = TirJoueuse
+    , prJoueuse = Just indiceJoueuse
     }
 
-prop_pre_tirVaisseau :: VaisseauJoueuse -> Cadence -> Bool
-prop_pre_tirVaisseau v cadProj =
-  prop_inv_vaisseau v && prop_inv_cadence cadProj
+prop_pre_tirVaisseau :: Int -> VaisseauJoueuse -> Cadence -> Bool
+prop_pre_tirVaisseau indiceJoueuse v cadProj =
+  indiceJoueuse >= 0 && prop_inv_vaisseau v && prop_inv_cadence cadProj
 
-prop_post_tirVaisseau :: VaisseauJoueuse -> Cadence -> Projectile -> Bool
-prop_post_tirVaisseau _ _ p =
+prop_post_tirVaisseau :: Int -> VaisseauJoueuse -> Cadence -> Projectile -> Bool
+prop_post_tirVaisseau indiceJoueuse _ _ p =
      prop_inv_projectile p
   && prDir p == Haut
   && prOwner p == TirJoueuse
+  && prJoueuse p == Just indiceJoueuse
 
 subirDegat :: VaisseauJoueuse -> VaisseauJoueuse
 subirDegat v = v { vjPv = max 0 (vjPv v - 1) }
@@ -352,7 +371,7 @@ finDeTourEnnemi rnd e
             in if shootNow
                  then
                    let hShot = eHitbox e1
-                       p = Projectile hShot Bas (Cadence 1 0) TirEnnemi
+                       p = Projectile hShot Bas (Cadence 1 0) TirEnnemi Nothing
                    in (e1, Just p)
                  else (e1, Nothing)
 

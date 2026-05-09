@@ -128,6 +128,7 @@ projectileEnnemi e =
     , prDir     = Bas
     , prCadence = Cadence 1 0
     , prOwner   = TirEnnemi
+    , prJoueuse = Nothing
     }
 
 pointTirEnnemi :: Hitbox -> Hitbox

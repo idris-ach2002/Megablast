@@ -79,6 +79,7 @@ data Moteur = Moteur
   , mScript      :: [EvenementPlanifie]
   , mTour        :: Int
   , mRng         :: StdGen
+  , mScores      :: [Score]
   , mScore       :: Score
   } deriving (Eq, Show)
 
@@ -91,7 +92,9 @@ prop_inv_moteur m =
   && all prop_inv_vaisseau           (mJoueuses m)
   && prop_inv_mursNiveau             (mMurs m)
   && prop_inv_cadence                (mCadScroll m)
+  && prop_inv_scores                 (mScores m)
   && prop_inv_score                  (mScore m)
+  && scoreTotal (mScores m) == mScore m
   && mTour m >= 0
   && scriptTrie (mScript m)
   && all prop_inv_evenement_planifie (mScript m)
@@ -132,5 +135,6 @@ mkMoteur obs projs enns jous murs cad evts tour seed
       , mScript      = sortBy (comparing epTour) evts
       , mTour        = tour
       , mRng         = mkStdGen seed
+      , mScores      = scoresNuls (length jous)
       , mScore       = scoreNul
       }
