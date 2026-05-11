@@ -1,3 +1,5 @@
+{-# LANGUAGE InstanceSigs #-}
+
 module Model.Score where
 
 ---------------------------------------------------------------------------------
@@ -8,14 +10,22 @@ newtype Score = Score
   { scoreValeur :: Int
   } deriving (Eq, Show, Ord)
 
+instance Semigroup Score where
+  (<>) :: Score -> Score -> Score
+  Score a <> Score b = Score (a + b)
+
+instance Monoid Score where
+  mempty :: Score
+  mempty = Score 0
+
 scoreNul :: Score
 scoreNul =
-  Score 0
+  mempty
 
 scoresNuls :: Int -> [Score]
 scoresNuls n
   | n <= 0    = []
-  | otherwise = replicate n scoreNul
+  | otherwise = replicate n mempty
 
 prop_inv_score :: Score -> Bool
 prop_inv_score score =
@@ -28,7 +38,7 @@ prop_inv_scores =
 ajouterPoints :: Int -> Score -> Score
 ajouterPoints points score
   | points <= 0 = score
-  | otherwise   = Score (scoreValeur score + points)
+  | otherwise   = score <> Score points
 
 -- | Ajoute des points au score d'une joueuse precise.
 --   Si l'indice est invalide, la liste de scores est laissee inchangee.
@@ -47,8 +57,8 @@ ajouterPointsJoueuse indice points scores
       s : ajouterAux ss (i - 1)
 
 scoreTotal :: [Score] -> Score
-scoreTotal scores =
-  Score (sum (map scoreValeur scores))
+scoreTotal =
+  mconcat
 
 scoreEnnemiBase :: Int
 scoreEnnemiBase =
@@ -69,7 +79,10 @@ scoreEnnemiDetruit tour =
 
 prop_post_ajouterPoints :: Int -> Score -> Bool
 prop_post_ajouterPoints points score =
-  prop_inv_score (ajouterPoints points score)
+  prop_inv_score score ==>
+    prop_inv_score (ajouterPoints points score)
+  where
+    a ==> b = not a || b
 
 prop_post_ajouterPointsJoueuse :: Int -> Int -> [Score] -> Bool
 prop_post_ajouterPointsJoueuse indice points scores =
@@ -88,3 +101,15 @@ prop_post_scoreTotal scores =
 prop_scoreEnnemiDetruit_positif :: Int -> Bool
 prop_scoreEnnemiDetruit_positif tour =
   scoreEnnemiDetruit tour >= scoreEnnemiBase
+
+prop_score_semigroup_assoc :: Score -> Score -> Score -> Bool
+prop_score_semigroup_assoc a b c =
+  a <> (b <> c) == (a <> b) <> c
+
+prop_score_monoid_left :: Score -> Bool
+prop_score_monoid_left s =
+  mempty <> s == s
+
+prop_score_monoid_right :: Score -> Bool
+prop_score_monoid_right s =
+  s <> mempty == s

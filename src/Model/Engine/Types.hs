@@ -1,5 +1,6 @@
 {- HLINT ignore "Use camelCase" -}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Model.Engine.Types where
 
@@ -12,8 +13,96 @@ import Model.Objects
 import System.Random (StdGen, mkStdGen)
 import Model.Score
 
+---------------------------------------------------------------------------------
+-- Script du moteur
+---------------------------------------------------------------------------------
+
+-- | Script séquentiel du moteur.
+--
+--   Ce type rend explicite la structure algébrique du script :
+--   * Functor/Applicative/Monad pour transformer et composer des scénarios,
+--   * Semigroup/Monoid pour concaténer des fragments de script,
+--   * Foldable/Traversable pour parcourir/valider les événements.
+newtype Script a = Script
+  { scriptToList :: [a]
+  } deriving (Eq, Show)
+
+scriptFromList :: [a] -> Script a
+scriptFromList = Script
+
+instance Functor Script where
+  fmap :: (a -> b) -> Script a -> Script b
+  fmap f (Script xs) = Script (map f xs)
+
+instance Applicative Script where
+  pure :: a -> Script a
+  pure x = Script [x]
+
+  (<*>) :: Script (a -> b) -> Script a -> Script b
+  Script fs <*> Script xs = Script [f x | f <- fs, x <- xs]
+
+instance Monad Script where
+  (>>=) :: Script a -> (a -> Script b) -> Script b
+  Script xs >>= f = Script (concatMap (scriptToList . f) xs)
+
+instance Foldable Script where
+  foldMap :: Monoid m => (a -> m) -> Script a -> m
+  foldMap f (Script xs) = foldMap f xs
+
+instance Traversable Script where
+  traverse :: Applicative f => (a -> f b) -> Script a -> f (Script b)
+  traverse f (Script xs) = Script <$> traverse f xs
+
+instance Semigroup (Script a) where
+  (<>) :: Script a -> Script a -> Script a
+  Script xs <> Script ys = Script (xs <> ys)
+
+instance Monoid (Script a) where
+  mempty :: Script a
+  mempty = Script []
+
+ordonnerScript :: Script EvenementPlanifie -> Script EvenementPlanifie
+ordonnerScript (Script evts) =
+  Script (sortBy (comparing epTour) evts)
+
+partitionScript :: (a -> Bool) -> Script a -> (Script a, Script a)
+partitionScript p (Script xs) =
+  let (ys, zs) = partitionList p xs
+  in (Script ys, Script zs)
+  where
+    partitionList _ [] = ([], [])
+    partitionList q (x:rest) =
+      let (as, bs) = partitionList q rest
+      in if q x then (x:as, bs) else (as, x:bs)
+
+scriptTrieParTour :: Script EvenementPlanifie -> Bool
+scriptTrieParTour (Script [])       = True
+scriptTrieParTour (Script [_])      = True
+scriptTrieParTour (Script (a:b:xs)) =
+  epTour a <= epTour b && scriptTrieParTour (Script (b:xs))
+
+prop_script_functor_id :: Eq a => Script a -> Bool
+prop_script_functor_id script =
+  fmap id script == script
+
+prop_script_semigroup_assoc :: Eq a => Script a -> Script a -> Script a -> Bool
+prop_script_semigroup_assoc x y z =
+  x <> (y <> z) == (x <> y) <> z
+
+prop_script_monoid_left :: Eq a => Script a -> Bool
+prop_script_monoid_left x =
+  mempty <> x == x
+
+prop_script_monoid_right :: Eq a => Script a -> Bool
+prop_script_monoid_right x =
+  x <> mempty == x
+
+---------------------------------------------------------------------------------
+-- Événements
+---------------------------------------------------------------------------------
+
 -- | Un événement planifié associe un numéro de tour à une action sur la scène.
---   Le script du moteur est une liste d'événements triée par tour croissant.
+--   Le script du moteur est une séquence d'événements triée par tour croissant.
 data Evenement =
     AppEnnemi Ennemi
   | AppObstacle Obstacle
@@ -76,7 +165,7 @@ data Moteur = Moteur
   , mJoueuses    :: [VaisseauJoueuse]
   , mMurs        :: MursNiveau
   , mCadScroll   :: Cadence
-  , mScript      :: [EvenementPlanifie]
+  , mScript      :: Script EvenementPlanifie
   , mTour        :: Int
   , mRng         :: StdGen
   , mScores      :: [Score]
@@ -96,12 +185,8 @@ prop_inv_moteur m =
   && prop_inv_score                  (mScore m)
   && scoreTotal (mScores m) == mScore m
   && mTour m >= 0
-  && scriptTrie (mScript m)
+  && scriptTrieParTour               (mScript m)
   && all prop_inv_evenement_planifie (mScript m)
-  where
-    scriptTrie []       = True
-    scriptTrie [_]      = True
-    scriptTrie (a:b:xs) = epTour a <= epTour b && scriptTrie (b:xs)
 
 mkMoteur
   :: [Obstacle]
@@ -132,7 +217,7 @@ mkMoteur obs projs enns jous murs cad evts tour seed
       , mJoueuses    = jous
       , mMurs        = murs
       , mCadScroll   = cad
-      , mScript      = sortBy (comparing epTour) evts
+      , mScript      = ordonnerScript (scriptFromList evts)
       , mTour        = tour
       , mRng         = mkStdGen seed
       , mScores      = scoresNuls (length jous)

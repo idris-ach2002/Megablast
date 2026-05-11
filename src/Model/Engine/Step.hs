@@ -2,7 +2,6 @@
 
 module Model.Engine.Step where
 
-import Data.List (partition)
 import Data.Text (Text)
 import Model.Engine.Collisions
 import Model.Engine.EnnemiSpawn
@@ -48,7 +47,7 @@ finDeTourMoteurEither m
             mTour m
 
           (evtsNow, evtsFutur) =
-            partition (\ep -> epTour ep <= tourActuel) (mScript m)
+            partitionScript (\ep -> epTour ep <= tourActuel) (mScript m)
 
           m0 =
             foldr (appliquerEvenement . epEvenement) m evtsNow

@@ -62,7 +62,7 @@ spec = do
           e1 = EvenementPlanifie 10 (DisparObstacle 0)
           e2 = EvenementPlanifie 2  (DisparEnnemi 0)
           m = unsafeRight "EngineSpec: m" (mkMoteurTest [] [] [] [v] cad [e1, e2] 0 0)
-      map epTour (mScript m) `shouldBe` [2, 10]
+      map epTour (scriptToList (mScript m)) `shouldBe` [2, 10]
       mScores m `shouldBe` [scoreNul]
       mScore m `shouldBe` scoreNul
 
@@ -379,7 +379,7 @@ spec = do
       mProjectiles m `shouldBe` []
       mEnnemis m `shouldBe` []
       mMeteores m `shouldBe` []
-      mScript m `shouldBe` []
+      scriptToList (mScript m) `shouldBe` []
       prop_inv_moteur m `shouldBe` True
 
     it "la configuration duo crée deux joueuses et deux scores" $ do

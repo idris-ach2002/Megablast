@@ -1,5 +1,6 @@
 {- HLINT ignore "Use camelCase" -}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Model.Objects where
 
@@ -325,8 +326,22 @@ actionFromInt n =
 newtype PV = PV Int
   deriving (Eq, Show, Ord)
 
+instance Semigroup PV where
+  (<>) :: PV -> PV -> PV
+  PV a <> PV b = PV (a + b)
+
 prop_inv_pv :: PV -> Bool
 prop_inv_pv (PV x) = x > 0
+
+prop_pv_semigroup_assoc :: PV -> PV -> PV -> Bool
+prop_pv_semigroup_assoc a b c =
+  a <> (b <> c) == (a <> b) <> c
+
+prop_pv_semigroup_preserve_inv :: PV -> PV -> Bool
+prop_pv_semigroup_preserve_inv a b =
+  prop_inv_pv a && prop_inv_pv b ==> prop_inv_pv (a <> b)
+  where
+    x ==> y = not x || y
 
 mkPV :: Int -> Either Text PV
 mkPV x
